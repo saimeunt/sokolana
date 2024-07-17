@@ -28,12 +28,14 @@
     "buffer": "6.0.3",
     "daisyui": "4.11.1",
     "encoding": "0.1.13",
+    "immer": "^10.1.1",
     "jotai": "2.8.3",
     "next": "14.0.4",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "react-hot-toast": "2.4.1",
-    "tslib": "^2.3.0"
+    "tslib": "^2.3.0",
+    "usehooks-ts": "^3.1.0"
   },
   "devDependencies": {
     "@nx/eslint": "19.0.0",
