@@ -122,7 +122,16 @@
         253,
         124,
         25
-      ]
+      ],
+        "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "count",
+            "type": "u32"
+          }
+        ]
+      }
     },
     {
       "name": "NftAccount",
@@ -135,25 +144,8 @@
         15,
         63,
         97
-      ]
-    }
-  ],
-  "types": [
-    {
-      "name": "Counter",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "count",
-            "type": "u32"
-          }
-        ]
-      }
-    },
-    {
-      "name": "NftAccount",
-      "type": {
+      ],
+        "type": {
         "kind": "struct",
         "fields": [
           {
