@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/solver.json`.
  */
 export type Solver = {
-  "address": "G4Y4Zm1BPHTFUGkj8HXmNderHWHxiZDPK1wC3E5WbZhG",
+  "address": "HRKSYCRNtAL3L9bmc5r2uUsYZr9QjMCxgvNRpat59jnH",
   "metadata": {
     "name": "solver",
     "version": "0.1.0",

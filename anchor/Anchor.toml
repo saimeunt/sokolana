@@ -5,8 +5,8 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-minter = "4XRSfpF2af5TRCCDfx2LC6nFp7Gm482yVj2cj6N15gcx"
-solver = "G4Y4Zm1BPHTFUGkj8HXmNderHWHxiZDPK1wC3E5WbZhG"
+minter = "6CicGdVrwar4djSJoQmxdsCz73SEuGuUnoNdmYiqfvAe"
+solver = "HRKSYCRNtAL3L9bmc5r2uUsYZr9QjMCxgvNRpat59jnH"
 
 [registry]
 url = "https://api.apr.dev"

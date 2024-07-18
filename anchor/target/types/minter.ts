@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/minter.json`.
  */
 export type Minter = {
-  "address": "4XRSfpF2af5TRCCDfx2LC6nFp7Gm482yVj2cj6N15gcx",
+  "address": "6CicGdVrwar4djSJoQmxdsCz73SEuGuUnoNdmYiqfvAe",
   "metadata": {
     "name": "minter",
     "version": "0.1.0",
