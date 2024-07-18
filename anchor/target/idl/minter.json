@@ -22,17 +22,17 @@
       "accounts": [
         {
           "name": "nft_account",
-          "writable": true,
-          "signer": true
+          "isMut": true,
+          "isSigner": true
         },
         {
           "name": "nft_id_counter",
-          "writable": true
+          "isMut": true
         },
         {
           "name": "user",
-          "writable": true,
-          "signer": true
+          "isMut": true,
+          "isSigner": true
         },
         {
           "name": "system_program",
@@ -69,13 +69,13 @@
       "accounts": [
         {
           "name": "nft_id_counter",
-          "writable": true,
-          "signer": true
+          "isMut": true,
+          "isSigner": true
         },
         {
           "name": "user",
-          "writable": true,
-          "signer": true
+          "isMut": true,
+          "isSigner": true
         },
         {
           "name": "system_program",
@@ -99,7 +99,7 @@
       "accounts": [
         {
           "name": "nft_account",
-          "writable": true
+          "isMut": true
         }
       ],
       "args": [
@@ -150,7 +150,7 @@
         "fields": [
           {
             "name": "owner",
-            "type": "pubkey"
+            "type": "publicKey"
           },
           {
             "name": "id",
