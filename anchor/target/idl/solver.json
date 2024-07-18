@@ -22,12 +22,12 @@
         "accounts": [
           {
             "name": "game",
-            "writable": true
+            "isMut": true
           },
           {
             "name": "signer",
-            "writable": true,
-            "signer": true
+            "isMut": true,
+            "isSigner": true
           },
           {
             "name": "system_program",
@@ -51,7 +51,7 @@
         "accounts": [
           {
             "name": "game",
-            "writable": true,
+            "isMut": true,
             "pda": {
               "seeds": [
                 {
@@ -75,8 +75,8 @@
           },
           {
             "name": "signer",
-            "writable": true,
-            "signer": true
+            "isMut": true,
+            "isSigner": true
           },
           {
             "name": "system_program",
@@ -105,15 +105,15 @@
         "accounts": [
           {
             "name": "game",
-            "writable": true
+            "isMut": true
           },
           {
             "name": "other_data"
           },
           {
             "name": "signer",
-            "writable": true,
-            "signer": true
+            "isMut": true,
+            "isSigner": true
           },
           {
             "name": "system_program",
@@ -162,11 +162,11 @@
               },
               {
                 "name": "leader",
-                "type": "pubkey"
+                "type": "publicKey"
               },
               {
                 "name": "nft_owner",
-                "type": "pubkey"
+                "type": "publicKey"
               },
               {
                 "name": "owner_reward_balance",
