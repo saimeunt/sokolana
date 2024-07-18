@@ -12,6 +12,7 @@ import * as assert from "assert";
 
 
 
+
 const solver = anchor.workspace.Solver as Program<Solver>;
 const createNft =  anchor.workspace.Minter as Program<Minter>;
 
@@ -26,9 +27,11 @@ let player_user =Keypair.generate();
 let compteurAccount = Keypair.generate();
 let nftAccount = Keypair.generate();
 let gamePDA = Keypair.generate().publicKey;
+let hashAccount = Keypair.generate();
 
 let bump:number;
 
+const id_nft = 1;
 const mapData = Buffer.from( [1, 1, 1, 1, 1, 1,
   1, 0, 0, 0, 0, 1,
   1, 2, 0, 0, 0, 1,
@@ -62,7 +65,7 @@ function displayBestSoluce(directions:ArrayBuffer) {
 
 }
 
-async function walletInit() {
+async function initWallet() {
 
   //const balance = await provider.connection.getBalance(gamePDA);
   //nftAccount = Keypair.generate();
@@ -76,115 +79,225 @@ async function walletInit() {
   
 }
 
-  describe("MinterNft", () => {
+async function createNFT() {
+
+  // initWallet();
+  hashAccount = Keypair.generate();
+
+  let tx =  await createNft.methods
+  .initializeNftId()
+  .accounts({
+  nftIdCounter:compteurAccount.publicKey,
+  user: game_authority.publicKey,
+  })
+  .signers([compteurAccount,  game_authority])
+  .rpc();
+
+      tx =  await createNft.methods
+          .initializeNftId()
+          .accounts({
+          nftIdCounter:compteurAccount.publicKey,
+          user: game_authority.publicKey,
+          })
+          .signers([compteurAccount, hashAccount, game_authority ])
+          .rpc();
+
    
-    it("Is created!", async () => {
-      
-      /* ******************************************** Initialisation du compteur de NFT et Création d'un NFT ************************************* */
-      await walletInit();
 
-      let tx =  await createNft.methods
-      .initializeNftId()
-      .accounts({
-        nftIdCounter:compteurAccount.publicKey,
-        user: game_authority.publicKey,
-      })
-      .signers([compteurAccount, game_authority])
-      .rpc();
-
-      console.log("initialisation ok");
-
-
+    
+ 
       tx = await createNft.methods
       .createNft(width, height, mapData)
       .accounts({
             nftAccount: nftAccount.publicKey,
             nftIdCounter: compteurAccount.publicKey,
+            hashStorage: hashAccount.publicKey,
             user: creator_user.publicKey,
-            
+      })
+      .signers([nftAccount, creator_user, hashAccount])
+      .rpc();
+
+
+     
+}
+
+
+
+
+  describe("MinterNft Program", () => {
+
+    it("HashData NFT Initialisation !", async () => {
+      
+      await initWallet();
+      let tx =  await createNft.methods
+         .initializeHashStorage()
+         .accounts({
+         hashStorage :hashAccount.publicKey,
+         // hashStorage: hashAccount.publicKey,
+         user: game_authority.publicKey,
+         })
+         .signers([ game_authority, hashAccount])
+         .rpc();
+
+      let hashdata = await createNft.account.hashStorage.fetch(hashAccount.publicKey);
+      assert.equal(hashdata.dataHashes.length, 0);
+   
+    }); 
+
+    it("Counter NFT Initialisation !", async () => {
+      
+      let tx =  await createNft.methods
+          .initializeNftId()
+          .accounts({
+          nftIdCounter:compteurAccount.publicKey,
+          user: game_authority.publicKey,
+          })
+          .signers([compteurAccount,  game_authority])
+          .rpc();
+
+      let compteur = await createNft.account.counter.fetch(compteurAccount.publicKey);
+      assert.equal(compteur.count, 0);
+    });
+
+    
+    it("Creation d'un NFT !", async () => {
+
+      let tx = await createNft.methods
+      .createNft(width, height, mapData)
+      .accounts({
+            nftAccount: nftAccount.publicKey,
+            hashStorage: hashAccount.publicKey,
+            nftIdCounter: compteurAccount.publicKey,
+            user: creator_user.publicKey,
       })
       .signers([nftAccount, creator_user])
       .rpc();
     
-      console.log("creation du nft Ok");
+      let nftAccountInfo = await createNft.account.nftAccount.fetch(nftAccount.publicKey);
+      assert.equal(nftAccountInfo.owner.toString(), creator_user.publicKey.toString());
+      assert.equal(nftAccountInfo.id, 1);
+      assert.equal(nftAccountInfo.height, height);
+      assert.equal(nftAccountInfo.width, width);
+      assert.deepEqual(nftAccountInfo.data, mapData);
+    });
+  
+ 
 
-    let nftAccountInfo = await createNft.account.nftAccount.fetch(nftAccount.publicKey);
-    assert.equal(nftAccountInfo.owner.toString(), creator_user.publicKey.toString());
-    assert.equal(nftAccountInfo.height, height);
-    assert.equal(nftAccountInfo.width, width);
-    assert.deepEqual(nftAccountInfo.data, mapData);
-    console.log("id= ", nftAccountInfo.id )
-    displayMapData(nftAccountInfo.data);
+  it("Should increase the counter !", async () => {
 
-    /* ********************************************** Initialisation du solver et Vérificaiton d'une solution ****************************************** */
-
-
-    //Création de la seed du PDA
-    const id_nft = 1;
-    const idBytes = new Uint8Array(new Uint32Array([id_nft]).buffer);
-    const seeds = 
-    Buffer.concat([
-    Buffer.from('Game'), 
-    idBytes,              
-    ]);
-   
-    //Récupération de l'adresse du PDA associé à id_nft
-    [gamePDA, bump] = await PublicKey.findProgramAddress(
-      [seeds],
-      solver.programId
-    );
-
-    //Affichag des balance du signer et du PDA avant la demande de solve
-    let balanceUser = await provider.connection.getBalance(player_user.publicKey);
-    let balancePda = await provider.connection.getBalance(gamePDA);
-    console.log("BalancePDA", balancePda);
-    console.log("BalanceUser", balanceUser)
-      
-    tx = await solver.methods
-    .initialize( id_nft)
+    
+    try {
+    let newNftAccount = Keypair.generate();
+    let tx = await createNft.methods
+    .createNft(width, height, mapData)
     .accounts({
-          game : gamePDA,
-          otherData: nftAccount.publicKey,
-          signer: game_authority.publicKey,
+          nftAccount: newNftAccount.publicKey,
+          hashStorage: hashAccount.publicKey,
+          nftIdCounter: compteurAccount.publicKey,
+          user: creator_user.publicKey,
     })
-    .signers([game_authority])
+    .signers([newNftAccount, creator_user])
     .rpc();
-
-    let updatedGame = await solver.account.gameState.fetch(gamePDA);
-    console.log("solved = ", updatedGame.solved)
-    console.log("id_nft=", updatedGame.idNft);
-    console.log("Pubkey du owner du nft", updatedGame.nftOwner);
-
-
-    //Demande de résolution d'une séquence de mouvement 
-    const moveSequence = Buffer.from( [3,1,3, 2,1,2,3]);
+  } catch (err) {
+    
+    assert.equal(err.error.errorCode.code, "DataAlreadyExists");
+    assert.equal(err.error.errorMessage, "This map already exist");
    
+  }
+  
+   
+  });
 
-    tx = await solver.methods
-    .solve( id_nft, moveSequence)
-    .accounts({
+});
+
+
+
+  describe("Solver Program", () => {
+      
+     
+      it("Solver initialisation !", async () => {
+    
+        createNFT();
+
+        //Création de la seed du PDA
+       
+        const idBytes = new Uint8Array(new Uint32Array([id_nft]).buffer);
+        const seeds = 
+        Buffer.concat([
+            Buffer.from('Game'), 
+            idBytes,              
+        ]);
+   
+        //Récupération de l'adresse du PDA associé à id_nft
+        [gamePDA, bump] = await PublicKey.findProgramAddress(
+            [seeds],
+            solver.programId
+        );
+
+        let tx = await solver.methods
+          .initialize( id_nft)
+          .accounts({
+             game : gamePDA,
+             otherData: nftAccount.publicKey,
+             signer: game_authority.publicKey,
+        })
+          .signers([game_authority])
+         .rpc();
+
+      
+
+        let updatedGame = await solver.account.gameState.fetch(gamePDA);
+        assert.equal(updatedGame.nftOwner.toString(), creator_user.publicKey.toString());
+        assert.equal(updatedGame.idNft, 1);
+        assert.equal(updatedGame.leader.toString(), "11111111111111111111111111111111");
+        assert.equal(updatedGame.solved, false);
+        assert.equal(updatedGame.leaderRewardBalance, 0);
+        assert.equal(updatedGame.ownerRewardBalance, 0);
+       
+      });
+    
+    it("Verify sequence !", async () => {
+         
+       
+
+       //Demande de résolution d'une séquence de mouvement 
+       const moveSequence = Buffer.from( [3,1,3, 2,1,2,3]);
+       let game = await solver.account.gameState.fetch(gamePDA);
+
+      let tx = await solver.methods
+        .solve( id_nft, moveSequence)
+        .accounts({
           game : gamePDA,
           otherData: nftAccount.publicKey,
           signer: player_user.publicKey,
-    })
-    .signers([player_user])
-    .rpc();
+        })
+        .signers([player_user])
+        .rpc();
 
-    //Affichage des éléments du PDA pour vérification 
-    updatedGame = await solver.account.gameState.fetch(gamePDA);
-    console.log("solved = ", updatedGame.solved)
-    displayBestSoluce(updatedGame.bestSoluce);
-    console.log("longueur best soluce=", updatedGame.bestSoluce.length);
-    console.log("Pubkey best soluce", updatedGame.leader);
-   
-    // Affichage des balances arpès la résolution
-    balancePda = await provider.connection.getBalance(gamePDA);
-    balanceUser = await provider.connection.getBalance(player_user.publicKey);
-    console.log("Balance du PDA:", balancePda);
-    console.log("Balance du user:", balanceUser);
+      
+      let updatedGame = await solver.account.gameState.fetch(gamePDA);
+      assert.equal(updatedGame.leader.toString(), player_user.publicKey);
+      assert.equal(updatedGame.solved, true);
+      assert.deepEqual(updatedGame.bestSoluce, moveSequence);
+      assert.equal(updatedGame.leaderRewardBalance, 500000);
+      assert.equal(updatedGame.ownerRewardBalance, 500000);
 
+     
+      // let balancePda = await provider.connection.getBalance(gamePDA);
+     
+      console.log("balanceOwnerNFt", updatedGame.ownerRewardBalance);
+      console.log("balanceLedar", updatedGame.leaderRewardBalance);
+    });
+
+    it("Sovler Leader Claim !", async () => {
+
+    let balancePda = await provider.connection.getBalance(gamePDA);
+    let balanceUser = await provider.connection.getBalance(player_user.publicKey);
+    let game = await solver.account.gameState.fetch(gamePDA);
+
+    
     // Claim de la cagnotte par le leader du niveau    
-    tx = await solver.methods
+    let tx = await solver.methods
     .claim() 
     .accounts({
           game : gamePDA,
@@ -193,13 +306,70 @@ async function walletInit() {
     .signers([player_user])
     .rpc();
     
-    console.log("Claim Ok")
-    balancePda = await provider.connection.getBalance(gamePDA);
-    balanceUser = await provider.connection.getBalance(player_user.publicKey);
-    console.log("Balance du PDA:", balancePda);
-    console.log("Balance du user:", balanceUser);
+    let balancePdaAfter = await provider.connection.getBalance(gamePDA);
+    let balanceUserAfter = await provider.connection.getBalance(player_user.publicKey);
+    let updatedGame = await solver.account.gameState.fetch(gamePDA);
+    assert.equal(updatedGame.leaderRewardBalance, 0);
+    assert.equal(updatedGame.ownerRewardBalance, 500000);
+    assert.equal(balancePdaAfter, balancePda-500000);
+    assert.equal(balanceUserAfter, balanceUser+500000);
+    
+   
 
   });
+
+  it("Nft Owner Claim !", async () => {
+
+    let balancePda = await provider.connection.getBalance(gamePDA);
+    let balanceUser = await provider.connection.getBalance(creator_user.publicKey);
+   
+    // Claim de la cagnotte par le leader du niveau    
+    let tx = await solver.methods
+    .claim() 
+    .accounts({
+          game : gamePDA,
+          signer: creator_user.publicKey,
+    })
+    .signers([creator_user])
+    .rpc();
+    
+    let balancePdaAfter = await provider.connection.getBalance(gamePDA);
+    let balanceUserAfter = await provider.connection.getBalance(creator_user.publicKey);
+    let updatedGame = await solver.account.gameState.fetch(gamePDA);
+    assert.equal(updatedGame.leaderRewardBalance, 0);
+    assert.equal(updatedGame.ownerRewardBalance, 0);
+    assert.equal(balancePdaAfter, balancePda-500000);
+    assert.equal(balanceUserAfter, balanceUser+500000);
+   
+
+  });
+
+  it("Claim Attempt by random address !", async () => {
+
+    try {
+      // Tentative de claim par une adresse non autorisée
+    // Claim de la cagnotte par le leader du niveau    
+    let tx = await solver.methods
+    .claim() 
+    .accounts({
+          game : gamePDA,
+          signer: game_authority.publicKey,
+    })
+    .signers([game_authority])
+    .rpc();
+    
+      // Si aucune erreur n'est lancée, échouez le test
+      assert.fail("Expected an error but none was thrown");
+    } catch (err) {
+      // Vérifiez que l'erreur capturée est bien celle que vous attendez
+      assert.equal(err.error.errorCode.code, "NotAuthorized");
+      assert.equal(err.error.errorMessage, "Not Authorized.");
+     
+    }
+   
+
+  });
+
   
 });
 

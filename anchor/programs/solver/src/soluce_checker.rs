@@ -1,6 +1,8 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 
+
+
 //  use minter::cpi::accounts::GetNftData;
 //  use minter::program::Minter;
 //  use minter::{self, NftAccount};
@@ -118,7 +120,8 @@ pub fn initialize(ctx: Context<Initialize>, id_nft:u32) -> Result<()> {
     game_account.id_nft = id_nft;
     game_account.nft_owner = data_struct.owner;
     game_account.solved = false;
-
+    game_account.owner_reward_balance = 0;
+    game_account.leader_reward_balance = 0;
     Ok(())
 }
 
@@ -342,7 +345,6 @@ pub fn move_to(map_data:&mut Vec<u8>, width:u8, height:u8, player_position:&mut 
 
 
 #[account]
-
 pub struct GameState {
     pub id_nft:u32,
     pub solved:bool,

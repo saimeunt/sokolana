@@ -36,6 +36,10 @@ export type Minter = {
           "writable": true
         },
         {
+          "name": "hashStorage",
+          "writable": true
+        },
+        {
           "name": "user",
           "writable": true,
           "signer": true
@@ -59,6 +63,36 @@ export type Minter = {
           "type": "bytes"
         }
       ]
+    },
+    {
+      "name": "initializeHashStorage",
+      "discriminator": [
+        121,
+        55,
+        27,
+        8,
+        88,
+        23,
+        84,
+        102
+      ],
+      "accounts": [
+        {
+          "name": "hashStorage",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
     },
     {
       "name": "initializeNftId",
@@ -89,31 +123,6 @@ export type Minter = {
         }
       ],
       "args": []
-    },
-    {
-      "name": "setData",
-      "discriminator": [
-        223,
-        114,
-        91,
-        136,
-        197,
-        78,
-        153,
-        153
-      ],
-      "accounts": [
-        {
-          "name": "nftAccount",
-          "writable": true
-        }
-      ],
-      "args": [
-        {
-          "name": "data",
-          "type": "u32"
-        }
-      ]
     }
   ],
   "accounts": [
@@ -131,6 +140,19 @@ export type Minter = {
       ]
     },
     {
+      "name": "hashStorage",
+      "discriminator": [
+        208,
+        85,
+        121,
+        34,
+        2,
+        191,
+        164,
+        45
+      ]
+    },
+    {
       "name": "nftAccount",
       "discriminator": [
         33,
@@ -144,6 +166,13 @@ export type Minter = {
       ]
     }
   ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "dataAlreadyExists",
+      "msg": "This map already exist"
+    }
+  ],
   "types": [
     {
       "name": "counter",
@@ -153,6 +182,25 @@ export type Minter = {
           {
             "name": "count",
             "type": "u32"
+          }
+        ]
+      }
+    },
+    {
+      "name": "hashStorage",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "dataHashes",
+            "type": {
+              "vec": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            }
           }
         ]
       }

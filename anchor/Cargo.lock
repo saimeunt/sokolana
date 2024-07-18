@@ -1061,6 +1061,7 @@ name = "minter"
 version = "0.1.0"
 dependencies = [
  "anchor-lang",
+ "sha2 0.9.9",
 ]
 
 [[package]]
