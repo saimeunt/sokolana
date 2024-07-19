@@ -11,7 +11,7 @@ declare_id!("HRKSYCRNtAL3L9bmc5r2uUsYZr9QjMCxgvNRpat59jnH");
 pub mod solver {
     use super::*;
  
-    pub fn solve(ctx: Context<Solve>, directions: Vec<u8>) -> Result<()> {
+    pub fn solve(ctx: Context<Solve>, directions: Vec<u8>) -> Result<bool> {
         soluce_checker::solve(ctx, directions)
     }
 

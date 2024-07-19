@@ -177,7 +177,7 @@ pub fn claim(ctx: Context<Claim>) -> Result<()> {
 
 }
 
-pub fn solve(ctx: Context<Solve>, directions: Vec<u8>) -> Result<()> {
+pub fn solve(ctx: Context<Solve>, directions: Vec<u8>) -> Result<bool> {
    
     //Paiement des fees pour la cagnotte du NFT et son créateur 
     let lamports_to_transfer:u64 = 1_000_000;
@@ -221,19 +221,23 @@ pub fn solve(ctx: Context<Solve>, directions: Vec<u8>) -> Result<()> {
     
    
    
-    if verify(map_data, width, height, &directions) {
+    if verify(map_data, width, height, &directions)? {
         game_account.solved = true;
+
         if directions.len() < game_account.best_soluce.len() || game_account.best_soluce.len() == 0  {
             game_account.best_soluce = directions.clone();
             game_account.leader = ctx.accounts.signer.key(); 
         }
+        msg!("Solve successful");
+        return Ok(true);
     }
 
-    return Ok(());
+    msg!("Solve fail");
+    return Ok(false);
 }
 
 
-pub fn verify(map_data:Vec<u8>, width:u8, height:u8, directions:&Vec<u8>) -> bool {
+pub fn verify(map_data:Vec<u8>, width:u8, height:u8, directions:&Vec<u8>) -> Result<bool> {
 
     let mut map_data = map_data.clone();
     let mut player_position:u16 = (width+1).into();
@@ -246,16 +250,16 @@ pub fn verify(map_data:Vec<u8>, width:u8, height:u8, directions:&Vec<u8>) -> boo
     }
 
     for i in directions {
-        let _ = move_to(&mut map_data, width, height, &mut player_position, *i); 
+        let _ = move_to(&mut map_data, width, height, &mut player_position, *i)?; 
     }   
    
     for i in 0..width*height{
         if map_data[i as usize] == 3 {
-            return false;
+            return Ok(false);
         }
     }
    
-    return true;
+    return Ok(true);
 }
 
 

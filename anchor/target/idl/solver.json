@@ -125,7 +125,8 @@
           "name": "directions",
           "type": "bytes"
         }
-      ]
+      ],
+      "returns": "bool"
     }
   ],
   "accounts": [

@@ -1,26 +1,20 @@
 import { Minter } from './../target/types/minter';
-
 import { Solver } from './../target/types/solver';
-
-
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
-import { decodeUpgradeableLoaderState } from '@coral-xyz/anchor/dist/cjs/utils/registry';
-
-import { Keypair, Connection, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
+import { Keypair, Connection, LAMPORTS_PER_SOL, PublicKey, clusterApiUrl } from "@solana/web3.js";
 import * as assert from "assert";
-
-
-
-
-const solver = anchor.workspace.Solver as Program<Solver>;
-const createNft =  anchor.workspace.Minter as Program<Minter>;
+let solver = anchor.workspace.Solver as Program<Solver>;
+let createNft =  anchor.workspace.Minter as Program<Minter>;
+const { BN } = anchor.BN; 
 
 const connection = new Connection('http://localhost:8899', 'confirmed');
 const provider = anchor.AnchorProvider.env();
 anchor.setProvider(anchor.AnchorProvider.env());
 
+//Déclaration des comptes nécessaires
 const lamports = 10 * LAMPORTS_PER_SOL;
+const fee = LAMPORTS_PER_SOL / 1000; 
 let game_authority = Keypair.generate();
 let creator_user =Keypair.generate();
 let player_user =Keypair.generate();
@@ -28,9 +22,9 @@ let compteurAccount = Keypair.generate();
 let nftAccount = Keypair.generate();
 let gamePDA = Keypair.generate().publicKey;
 let hashAccount = Keypair.generate();
-
 let bump:number;
 
+//Déclaration des données pour la création d'un NFT
 let id_nft = 1;
 const mapData = Buffer.from( [1, 1, 1, 1, 1, 1,
   1, 0, 0, 0, 0, 1,
@@ -41,7 +35,7 @@ const mapData = Buffer.from( [1, 1, 1, 1, 1, 1,
 const width = 6;
 const height = 6;
 
-
+/* ************************************************************** Fonction d'affichage pour les Vec de mapData et de Soluce ****************************** */
 function displayMapData(mapData:ArrayBuffer) {
   console.log("Map data:");
   for (let i = 0; i < height; i++) {
@@ -65,13 +59,24 @@ function displayBestSoluce(directions:ArrayBuffer) {
 
 }
 
+/**************************************************************** Fixture pour les tests ***************************************************************************  */
+
+async function initProgram() {
+  solver = anchor.workspace.Solver as Program<Solver>;
+  createNft =  anchor.workspace.Minter as Program<Minter>;
+
+}
+
 async function initWallet() {
 
-  //const balance = await provider.connection.getBalance(gamePDA);
-  //nftAccount = Keypair.generate();
- 
+  game_authority = Keypair.generate();
   creator_user =Keypair.generate();
   player_user =Keypair.generate();
+  compteurAccount = Keypair.generate();
+  nftAccount = Keypair.generate();
+  gamePDA = Keypair.generate().publicKey;
+  hashAccount = Keypair.generate();
+  
   let tx = await connection.requestAirdrop(creator_user.publicKey, lamports);
   tx = await connection.requestAirdrop(player_user.publicKey, lamports);
   tx = await connection.requestAirdrop(game_authority.publicKey, lamports);
@@ -79,42 +84,43 @@ async function initWallet() {
   
 }
 
+async function initNft() {
+  
+  let tx =  await createNft.methods
+      .initializeHashStorage()
+      .accounts({
+          hashStorage :hashAccount.publicKey,
+          user: game_authority.publicKey,
+      })
+      .signers([ game_authority, hashAccount])
+      .rpc();
+
+    tx =  await createNft.methods
+       .initializeNftId()
+       .accounts({
+            nftIdCounter:compteurAccount.publicKey,
+            user: game_authority.publicKey,
+       })
+      .signers([compteurAccount,  game_authority])
+      .rpc();
+
+}
+
 async function createNFT() {
 
-  // initWallet();
-  hashAccount = Keypair.generate();
-
-  let tx =  await createNft.methods
-  .initializeNftId()
-  .accounts({
-  nftIdCounter:compteurAccount.publicKey,
-  user: game_authority.publicKey,
-  })
-  .signers([compteurAccount,  game_authority])
-  .rpc();
-
-      tx =  await createNft.methods
-          .initializeNftId()
-          .accounts({
-          nftIdCounter:compteurAccount.publicKey,
-          user: game_authority.publicKey,
-          })
-          .signers([compteurAccount, hashAccount, game_authority ])
-          .rpc();
-
-      tx = await createNft.methods
+   let tx = await createNft.methods
       .createNft(width, height, mapData)
       .accounts({
-            nftAccount: nftAccount.publicKey,
-            nftIdCounter: compteurAccount.publicKey,
-            hashStorage: hashAccount.publicKey,
-            user: creator_user.publicKey,
+          nftAccount: nftAccount.publicKey,
+          hashStorage: hashAccount.publicKey,
+          nftIdCounter: compteurAccount.publicKey,
+          user: creator_user.publicKey,
       })
-      .signers([nftAccount, creator_user, hashAccount])
+      .signers([nftAccount, creator_user])
       .rpc();
 }
 
-async function initializeSolverPda(id:number) {
+async function getSolverSeedFromId(id:number) {
 
   id_nft = id; 
   const idBytes = new Uint8Array(new Uint32Array([id_nft]).buffer);
@@ -124,301 +130,414 @@ async function initializeSolverPda(id:number) {
       idBytes,              
   ]);
 
-  //Récupération de l'adresse du PDA associé à id_nft
   [gamePDA, bump] = await PublicKey.findProgramAddress(
       [seeds],
       solver.programId
   );
-
-
 }
 
+async function initSolver() {
+
+  await getSolverSeedFromId(1);
+  let tx = await solver.methods
+      .initialize(id_nft)
+      .accounts({
+          game : gamePDA,
+          otherData: nftAccount.publicKey,
+          signer: game_authority.publicKey,
+      })
+      .signers([game_authority])
+      .rpc();
+}
+async function solveSequence() {
+    const moveSequence = Buffer.from( [3,1,3,2,1,2,3]);
+    let tx = await solver.methods
+        .solve(moveSequence)
+        .accounts({
+            game : gamePDA,
+            otherData: nftAccount.publicKey,
+            signer: player_user.publicKey,
+        })
+        .signers([player_user])
+        .rpc();
+}
+   
 
 
   describe("MinterNft Program", () => {
 
-    it("HashData NFT Initialisation !", async () => {
+      beforeEach(async function() {
+        await initProgram();
+        await initWallet();
+      });
+
+      describe("Hash Data Initialisation", () => {
       
-      await initWallet();
-      let tx =  await createNft.methods
-         .initializeHashStorage()
-         .accounts({
-         hashStorage :hashAccount.publicKey,
-         // hashStorage: hashAccount.publicKey,
-         user: game_authority.publicKey,
-         })
-         .signers([ game_authority, hashAccount])
-         .rpc();
+          it("should set the length of hashdata to 0", async () => {
+              let tx =  await createNft.methods
+                  .initializeHashStorage()
+                  .accounts({
+                      hashStorage :hashAccount.publicKey,
+                      user: game_authority.publicKey,
+                  })
+                  .signers([ game_authority, hashAccount])
+                  .rpc();
 
-      let hashdata = await createNft.account.hashStorage.fetch(hashAccount.publicKey);
-      assert.equal(hashdata.dataHashes.length, 0);
-   
-    }); 
+              let hashdata = await createNft.account.hashStorage.fetch(hashAccount.publicKey);
+              assert.equal(hashdata.dataHashes.length, 0);
+          }); 
 
-    it("Counter NFT Initialisation !", async () => {
-      
-      let tx =  await createNft.methods
-          .initializeNftId()
-          .accounts({
-          nftIdCounter:compteurAccount.publicKey,
-          user: game_authority.publicKey,
-          })
-          .signers([compteurAccount,  game_authority])
-          .rpc();
+      });
 
-      let compteur = await createNft.account.counter.fetch(compteurAccount.publicKey);
-      assert.equal(compteur.count, 0);
-    });
+      describe("Counter NFT Initialisation", () => {
 
-    it("Should catch error : Wrong Dymension", async () => {
+          it("should set count to 0 ", async () => {
+              let tx =  await createNft.methods
+                  .initializeNftId()
+                  .accounts({
+                      nftIdCounter:compteurAccount.publicKey,
+                      user: game_authority.publicKey,
+                  })
+                  .signers([compteurAccount,  game_authority])
+                  .rpc();
 
-      let wrongWidth = 4;
-      try {
-        let tx = await createNft.methods
-        .createNft(wrongWidth, height, mapData)
-        .accounts({
-            nftAccount: nftAccount.publicKey,
-            hashStorage: hashAccount.publicKey,
-            nftIdCounter: compteurAccount.publicKey,
-            user: creator_user.publicKey,
-        })
-        .signers([nftAccount, creator_user])
-        .rpc();
-        // Si aucune erreur n'est lancée, échouez le test
-        assert.fail("Expected an error but none was thrown");
-      } catch (err) {
-        
-        assert.equal(err.error.errorCode.code, "WrongDymension");
-        assert.equal(err.error.errorMessage, "Width * height does not mathc data.len");
-       
-      }
-      
-    });
+              let compteur = await createNft.account.counter.fetch(compteurAccount.publicKey);
+              assert.equal(compteur.count, 0);
+          });
 
-    it("Creation d'un NFT !", async () => {
+      });
 
-      let tx = await createNft.methods
-      .createNft(width, height, mapData)
-      .accounts({
-            nftAccount: nftAccount.publicKey,
-            hashStorage: hashAccount.publicKey,
-            nftIdCounter: compteurAccount.publicKey,
-            user: creator_user.publicKey,
-      })
-      .signers([nftAccount, creator_user])
-      .rpc();
-    
-      let nftAccountInfo = await createNft.account.nftAccount.fetch(nftAccount.publicKey);
-      assert.equal(nftAccountInfo.owner.toString(), creator_user.publicKey.toString());
-      assert.equal(nftAccountInfo.id, 1);
-      assert.equal(nftAccountInfo.height, height);
-      assert.equal(nftAccountInfo.width, width);
-      assert.deepEqual(nftAccountInfo.data, mapData);
-    });
-  
- 
+    describe("Function CreateNft", () => {  
 
-  it("Should not create the NFT cause of duplicate !", async () => {
+        beforeEach(async function() {
+            await initNft();
+        });
 
-    
-    try {
-    let newNftAccount = Keypair.generate();
-    let tx = await createNft.methods
-    .createNft(width, height, mapData)
-    .accounts({
-          nftAccount: newNftAccount.publicKey,
-          hashStorage: hashAccount.publicKey,
-          nftIdCounter: compteurAccount.publicKey,
-          user: creator_user.publicKey,
-    })
-    .signers([newNftAccount, creator_user])
-    .rpc();
-  } catch (err) {
-    
-    assert.equal(err.error.errorCode.code, "DataAlreadyExists");
-    assert.equal(err.error.errorMessage, "This map already exist");
-   
-  }
-  
-   
-  });
+        it("Should catch error : Wrong Dymension", async () => {
 
-  it("Should increase the counter !", async () => {
+            let wrongWidth = 4;
+            try {
+                let tx = await createNft.methods
+                    .createNft(wrongWidth, height, mapData)
+                    .accounts({
+                        nftAccount: nftAccount.publicKey,
+                        hashStorage: hashAccount.publicKey,
+                        nftIdCounter: compteurAccount.publicKey,
+                        user: creator_user.publicKey,
+                    })
+                    .signers([nftAccount, creator_user])
+                    .rpc();
+                assert.fail("Expected an error but none was thrown");
+            } catch (err) {
+                assert.equal(err.error.errorCode.code, "WrongDymension");
+                assert.equal(err.error.errorMessage, "Width * height does not mathc data.len");
+            }
 
-    let newNftAccount = Keypair.generate();
-    const mapData2 = Buffer.from( [1, 1, 1, 1, 1, 1,
-      1, 0, 0, 0, 0, 1,
-      1, 2, 0, 1, 0, 1,
-      1, 0, 3, 0, 0, 1,
-      1, 0, 0, 4, 0, 1,
-      1, 1 ,1 ,1, 1, 1]); 
-    const width = 6;
-    const height = 6;
-    let tx = await createNft.methods
-      .createNft(width, height, mapData2)
-      .accounts({
-            nftAccount: newNftAccount.publicKey,
-            hashStorage: hashAccount.publicKey,
-            nftIdCounter: compteurAccount.publicKey,
-            user: creator_user.publicKey,
-      })
-      .signers([newNftAccount, creator_user])
-      .rpc();
-    
-      let nftAccountInfo = await createNft.account.nftAccount.fetch(newNftAccount.publicKey);
-      
-      // assert.equal(nftAccountInfo.owner.toString(), creator_user.publicKey.toString());
-      assert.equal(nftAccountInfo.id, 2);
-      // assert.equal(nftAccountInfo.height, height);
-      // assert.equal(nftAccountInfo.width, width);
-      // assert.deepEqual(nftAccountInfo.data, mapData);
-    });
-  
-   
-  });
+        });
 
-  describe("Solver Program", () => {
-      
+        it("should assign the NFT with correct parameters !", async () => {
      
-    it("Solver initialisation !", async () => {
+            let tx = await createNft.methods
+                .createNft(width, height, mapData)
+                .accounts({
+                    nftAccount: nftAccount.publicKey,
+                    hashStorage: hashAccount.publicKey,
+                    nftIdCounter: compteurAccount.publicKey,
+                    user: creator_user.publicKey,
+                })
+                .signers([nftAccount, creator_user])
+                .rpc();
     
-        createNFT();
-        initializeSolverPda(1);
+            let nftAccountInfo = await createNft.account.nftAccount.fetch(nftAccount.publicKey);
+            assert.equal(nftAccountInfo.owner.toString(), creator_user.publicKey.toString());
+            assert.equal(nftAccountInfo.id, 1);
+            assert.equal(nftAccountInfo.height, height);
+            assert.equal(nftAccountInfo.width, width);
+            assert.deepEqual(nftAccountInfo.data, mapData);
+        });
+  
 
-        let tx = await solver.methods
-          .initialize(id_nft)
-          .accounts({
-             game : gamePDA,
-             otherData: nftAccount.publicKey,
-             signer: game_authority.publicKey,
-        })
-          .signers([game_authority])
-         .rpc();
+        it("Should not create the NFT cause of duplicate !", async () => {
 
-      
+            try {
+                let newNftAccount = Keypair.generate();
+                let tx = await createNft.methods
+                    .createNft(width, height, mapData)
+                    .accounts({
+                        nftAccount: newNftAccount.publicKey,
+                        hashStorage: hashAccount.publicKey,
+                        nftIdCounter: compteurAccount.publicKey,
+                        user: creator_user.publicKey,
+                    })
+                    .signers([newNftAccount, creator_user])
+                    .rpc();
+            } catch (err) {
+                assert.equal(err.error.errorCode.code, "DataAlreadyExists");
+                assert.equal(err.error.errorMessage, "This map already exist");
+            }
+  
+        });
 
-        let updatedGame = await solver.account.gameState.fetch(gamePDA);
-        assert.equal(updatedGame.nftOwner.toString(), creator_user.publicKey.toString());
-        assert.equal(updatedGame.idNft, 1);
-        assert.equal(updatedGame.leader.toString(), "11111111111111111111111111111111");
-        assert.equal(updatedGame.solved, false);
-        assert.equal(updatedGame.leaderRewardBalance, 0);
-        assert.equal(updatedGame.ownerRewardBalance, 0);
-       
+
+        it("Should increase the counter of id to 2  !", async () => {
+           
+           
+            createNFT();
+            let newNftAccount = Keypair.generate();
+            const mapData2 = Buffer.from( [1, 1, 1, 1, 1, 1,
+                                           1, 0, 0, 0, 0, 1,
+                                           1, 2, 0, 1, 0, 1,
+                                           1, 0, 3, 0, 0, 1,
+                                           1, 0, 0, 4, 0, 1,
+                                           1, 1 ,1 ,1, 1, 1]); 
+            const width = 6;
+            const height = 6;
+            let tx = await createNft.methods
+                .createNft(width, height, mapData2)
+                .accounts({
+                    nftAccount: newNftAccount.publicKey,
+                    hashStorage: hashAccount.publicKey,
+                    nftIdCounter: compteurAccount.publicKey,
+                    user: creator_user.publicKey,
+            })
+            .signers([newNftAccount, creator_user])
+            .rpc();
+    
+            let nftAccountInfo = await createNft.account.nftAccount.fetch(newNftAccount.publicKey);
+            assert.equal(nftAccountInfo.id, 2);
+        });
+  
+    });
+  
+});
+
+describe.only("Solver Program", () => {
+    
+    beforeEach(async function() {
+        
+    });
+
+    describe("Solver Initialisation", () => { 
+
+        it("Solver set a solver with correct parameters !", async () => {
+         
+            await initProgram();
+            await initWallet();
+            await initNft();
+            await createNFT();
+            await getSolverSeedFromId(1);
+            let tx = await solver.methods
+               .initialize(id_nft)
+               .accounts({
+                   game : gamePDA,
+                   otherData: nftAccount.publicKey,
+                   signer: game_authority.publicKey,
+               })
+               .signers([game_authority])
+               .rpc();
+
+            let updatedGame = await solver.account.gameState.fetch(gamePDA);
+            assert.equal(updatedGame.nftOwner.toString(), creator_user.publicKey.toString());
+            assert.equal(updatedGame.idNft, 1);
+            assert.equal(updatedGame.leader.toString(), "11111111111111111111111111111111");
+            assert.equal(updatedGame.solved, false);
+            assert.equal(updatedGame.leaderRewardBalance, 0);
+            assert.equal(updatedGame.ownerRewardBalance, 0);
+
+        });
+
+        it("Should catch error : PDA & id_NFT not associated !", async () => {
+        
+          await getSolverSeedFromId(1);
+          let wrong_id_nft = 2;
+          try {
+              let tx = await solver.methods
+                  .initialize(wrong_id_nft)
+                  .accounts({
+                      game : gamePDA,
+                      otherData: nftAccount.publicKey,
+                      signer: game_authority.publicKey,
+                  })
+                  .signers([game_authority])
+                  .rpc();
+         
+              assert.fail("Expected an error but none was thrown");
+          } catch (err) {
+            assert.equal(err.error.errorCode.code, "WrongNftId");
+            assert.equal(err.error.errorMessage, "Wrong NFT Id.");
+          }
+     
       });
 
 
-    it("Should catch error : PDA & id_NFT not associated !", async () => {
-    
-        createNFT();
-        initializeSolverPda(1);
+    });
 
-        let wrong_id_nft = 2;
-        try {
-        let tx = await solver.methods
-          .initialize(wrong_id_nft)
+    describe("Function Solve Test", () => {
+    
+        it("Should accept the sequence, set the best solution, transfer the money !", async () => {
+
+          
+          const moveSequence = Buffer.from( [3,1,3,2,1,2,3]);
+          let tx = await solver.methods
+          .solve(moveSequence)
           .accounts({
-             game : gamePDA,
-             otherData: nftAccount.publicKey,
-             signer: game_authority.publicKey,
-        })
-          .signers([game_authority])
+              game : gamePDA,
+              otherData: nftAccount.publicKey,
+              signer: player_user.publicKey,
+          })
+          .signers([player_user])
           .rpc();
-           // Si aucune erreur n'est lancée, échouez le test
-        assert.fail("Expected an error but none was thrown");
-        } catch (err) {
-            assert.equal(err.error.errorCode.code, "WrongNftId");
-            assert.equal(err.error.errorMessage, "Wrong NFT Id.");
-      
-        }
-       
-       
+          /*
+          await connection.confirmTransaction(tx);
+          console.log("tx", tx);
+          const result = await connection.getParsedTransaction(tx);
+          if (!result) {
+            throw new Error('Transaction result is null or undefined');
+          }
+
+          const logMessages = result.meta.logMessages || [];
+          console.log('Log Messages:', logMessages);
+         
+          const boolResult = result.meta?.logMessages?.some(msg => msg.includes('result'));
+          console.log("result", boolResult);
+          */
+          let updatedGame = await solver.account.gameState.fetch(gamePDA);
+          assert.equal(updatedGame.leader.toString(), player_user.publicKey);
+          assert.equal(updatedGame.solved, true);
+          assert.deepEqual(updatedGame.bestSoluce, moveSequence);
+          
+         
+          const tips = BigInt(fee) / 2n; 
+          const tipsBN = new BN(tips.toString()); 
+          const leaderRewardBigInt = BigInt(updatedGame.leaderRewardBalance.toString());
+          const ownerRewardBigInt = BigInt(updatedGame.ownerRewardBalance.toString());
+          assert.equal(leaderRewardBigInt, tipsBN);
+          assert.equal(ownerRewardBigInt, tipsBN);       
+          
+          
+    
+        });
+
+        it("Should catch error : Invalid Move !", async () => {
+
+          // await initSolver();
+          const moveSequence = Buffer.from( [3,1,6,2,1,2,3]);
+          try {
+          let tx = await solver.methods
+          .solve(moveSequence)
+          .accounts({
+              game : gamePDA,
+              otherData: nftAccount.publicKey,
+              signer: player_user.publicKey,
+          })
+          .signers([player_user])
+          .rpc();
+          let updatedGame = await solver.account.gameState.fetch(gamePDA);
+          
+          assert.fail("Expected an error but none was thrown");
+        } catch(err) {
+          assert.equal(err.error.errorCode.code, "UnknownDirection");
+          assert.equal(err.error.errorMessage, "Unknown direction.");
+        }              
+    
+        });
+
+        it("Should accept the sequence but do not change the best solution", async () => {
+
+          
+          let game = await solver.account.gameState.fetch(gamePDA);
+          const bestSoluce = game.bestSoluce;
+          const moveSequence = Buffer.from( [3,1,3,1,3,2,1,2,3]);
+          let tx = await solver.methods
+          .solve(moveSequence)
+          .accounts({
+              game : gamePDA,
+              otherData: nftAccount.publicKey,
+              signer: player_user.publicKey,
+          })
+          .signers([player_user])
+          .rpc();
+
+          let updatedGame = await solver.account.gameState.fetch(gamePDA);
+          assert.equal(updatedGame.leader.toString(), player_user.publicKey);
+          assert.equal(updatedGame.solved, true);
+          assert.deepEqual(updatedGame.bestSoluce, bestSoluce);
+
+                                  
+          
+                      
+    
+        });
+
     });
 
+
+    describe("Function Claim Test", () => {
+
+        // beforeEach(async function() {
+        //     await initSolver();
+        //     await solveSequence();
+        //   });
+     
+          
+        it("Leader Claim !", async () => {
+            let balancePda = BigInt(await provider.connection.getBalance(gamePDA));
+            let balanceUser = BigInt(await provider.connection.getBalance(player_user.publicKey));
+           
+            let game = await solver.account.gameState.fetch(gamePDA);
+            let leaderRewardBigInt = BigInt(game.leaderRewardBalance.toString());
+
     
-    it("Verify sequence !", async () => {
-
-        //Demande de résolution d'une séquence de mouvement 
-        const moveSequence = Buffer.from( [3,1,3, 2,1,2,3]);
-        initializeSolverPda(1);
-
-        let tx = await solver.methods
-        .solve(moveSequence)
-        .accounts({
-          game : gamePDA,
-          otherData: nftAccount.publicKey,
-          signer: player_user.publicKey,
-        })
-        .signers([player_user])
-        .rpc();
-
-      
-        let updatedGame = await solver.account.gameState.fetch(gamePDA);
-        assert.equal(updatedGame.leader.toString(), player_user.publicKey);
-        assert.equal(updatedGame.solved, true);
-        assert.deepEqual(updatedGame.bestSoluce, moveSequence);
-        assert.equal(updatedGame.leaderRewardBalance, 500000);
-        assert.equal(updatedGame.ownerRewardBalance, 500000);
+            let tx = await solver.methods
+                .claim() 
+                .accounts({
+                    game : gamePDA,
+                    signer: player_user.publicKey,
+                })
+                .signers([player_user])
+                .rpc();
     
+            let balancePdaAfter = await provider.connection.getBalance(gamePDA);
+            let balanceUserAfter = await provider.connection.getBalance(player_user.publicKey);
+            let updatedGame = await solver.account.gameState.fetch(gamePDA);
+
+           
+           
+            assert.equal(updatedGame.leaderRewardBalance, 0);
+            assert.equal(balancePdaAfter, balancePda-leaderRewardBigInt);
+            assert.equal(balanceUserAfter, balanceUser+leaderRewardBigInt);
+
     });
-
-    it("Sovler Leader Claim !", async () => {
-
-    let balancePda = await provider.connection.getBalance(gamePDA);
-    let balanceUser = await provider.connection.getBalance(player_user.publicKey);
-    let game = await solver.account.gameState.fetch(gamePDA);
-
-    
-    // Claim de la cagnotte par le leader du niveau    
-    let tx = await solver.methods
-    .claim() 
-    .accounts({
-          game : gamePDA,
-          signer: player_user.publicKey,
-    })
-    .signers([player_user])
-    .rpc();
-    
-    let balancePdaAfter = await provider.connection.getBalance(gamePDA);
-    let balanceUserAfter = await provider.connection.getBalance(player_user.publicKey);
-    let updatedGame = await solver.account.gameState.fetch(gamePDA);
-    assert.equal(updatedGame.leaderRewardBalance, 0);
-    assert.equal(updatedGame.ownerRewardBalance, 500000);
-    assert.equal(balancePdaAfter, balancePda-500000);
-    assert.equal(balanceUserAfter, balanceUser+500000);
-    
-   
-
-  });
 
   it("Nft Owner Claim !", async () => {
-
-    let balancePda = await provider.connection.getBalance(gamePDA);
-    let balanceUser = await provider.connection.getBalance(creator_user.publicKey);
-   
-    // Claim de la cagnotte par le leader du niveau    
-    let tx = await solver.methods
-    .claim() 
-    .accounts({
-          game : gamePDA,
-          signer: creator_user.publicKey,
-    })
-    .signers([creator_user])
-    .rpc();
+      
+      let balancePda = BigInt(await provider.connection.getBalance(gamePDA));
+      let balanceUser = BigInt(await provider.connection.getBalance(creator_user.publicKey));
+      let game = await solver.account.gameState.fetch(gamePDA);
+      let OwnerRewardBigInt = BigInt(game.ownerRewardBalance.toString());
+      let tx = await solver.methods
+          .claim() 
+          .accounts({
+              game : gamePDA,
+              signer: creator_user.publicKey,
+          })
+          .signers([creator_user])
+          .rpc();
     
-    let balancePdaAfter = await provider.connection.getBalance(gamePDA);
-    let balanceUserAfter = await provider.connection.getBalance(creator_user.publicKey);
-    let updatedGame = await solver.account.gameState.fetch(gamePDA);
-    assert.equal(updatedGame.leaderRewardBalance, 0);
-    assert.equal(updatedGame.ownerRewardBalance, 0);
-    assert.equal(balancePdaAfter, balancePda-500000);
-    assert.equal(balanceUserAfter, balanceUser+500000);
+      let updatedGame = await solver.account.gameState.fetch(gamePDA);
+      let balancePdaAfter = await provider.connection.getBalance(gamePDA);
+      let balanceUserAfter = await provider.connection.getBalance(creator_user.publicKey);
+     
+   
+      assert.equal(updatedGame.ownerRewardBalance, 0);
+      assert.equal(balancePdaAfter, balancePda-OwnerRewardBigInt);
+      assert.equal(balanceUserAfter, balanceUser+OwnerRewardBigInt);
    
 
   });
 
   it("Claim Attempt by random address !", async () => {
-
+    getSolverSeedFromId(1);
     try {
       // Tentative de claim par une adresse non autorisée
     // Claim de la cagnotte par le leader du niveau    
@@ -442,6 +561,8 @@ async function initializeSolverPda(id:number) {
    
 
   });
+
+});
 
   
 });

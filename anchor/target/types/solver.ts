@@ -131,7 +131,8 @@ export type Solver = {
           "name": "directions",
           "type": "bytes"
         }
-      ]
+      ],
+      "returns": "bool"
     }
   ],
   "accounts": [
