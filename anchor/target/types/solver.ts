@@ -220,6 +220,10 @@ export type Solver = {
           {
             "name": "leaderRewardBalance",
             "type": "u64"
+          },
+          {
+            "name": "lastRequestResult",
+            "type": "u8"
           }
         ]
       }

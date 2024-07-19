@@ -282,7 +282,7 @@ async function solveSequence() {
         it("Should increase the counter of id to 2  !", async () => {
            
            
-            createNFT();
+            await createNFT();
             let newNftAccount = Keypair.generate();
             const mapData2 = Buffer.from( [1, 1, 1, 1, 1, 1,
                                            1, 0, 0, 0, 0, 1,
@@ -311,7 +311,7 @@ async function solveSequence() {
   
 });
 
-describe.only("Solver Program", () => {
+describe("Solver Program", () => {
     
     beforeEach(async function() {
         
@@ -405,7 +405,7 @@ describe.only("Solver Program", () => {
           assert.equal(updatedGame.leader.toString(), player_user.publicKey);
           assert.equal(updatedGame.solved, true);
           assert.deepEqual(updatedGame.bestSoluce, moveSequence);
-          
+          assert.equal(updatedGame.lastRequestResult, 3);
          
           const tips = BigInt(fee) / 2n; 
           const tipsBN = new BN(tips.toString()); 
@@ -461,11 +461,32 @@ describe.only("Solver Program", () => {
           let updatedGame = await solver.account.gameState.fetch(gamePDA);
           assert.equal(updatedGame.leader.toString(), player_user.publicKey);
           assert.equal(updatedGame.solved, true);
+          assert.equal(updatedGame.lastRequestResult, 2);
           assert.deepEqual(updatedGame.bestSoluce, bestSoluce);
+    
+        });
 
-                                  
+        it("Should reject the sequence", async () => {
+
           
-                      
+          let game = await solver.account.gameState.fetch(gamePDA);
+          const bestSoluce = game.bestSoluce;
+          const moveSequence = Buffer.from( [3,1,1,3,2,1,2,3]);
+          let tx = await solver.methods
+          .solve(moveSequence)
+          .accounts({
+              game : gamePDA,
+              otherData: nftAccount.publicKey,
+              signer: player_user.publicKey,
+          })
+          .signers([player_user])
+          .rpc();
+
+          let updatedGame = await solver.account.gameState.fetch(gamePDA);
+          assert.equal(updatedGame.leader.toString(), player_user.publicKey);
+          assert.equal(updatedGame.solved, true);
+          assert.equal(updatedGame.lastRequestResult, 1);
+          assert.deepEqual(updatedGame.bestSoluce, bestSoluce);
     
         });
 
