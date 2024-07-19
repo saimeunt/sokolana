@@ -1,14 +1,15 @@
 import { useRef } from 'react';
 import { useEventListener } from 'usehooks-ts';
 
-import useContext from './context/hook';
+import useContext from '@/components/context/hook';
 import { Directions } from '../../lib/types';
-import { canMove, isFinished } from './context/level-state';
+import { canMove, canPush, isFinished } from '@/components/context/level-state';
 
 const KeyboardHandler = () => {
   const {
     state: { level },
     move,
+    push,
     undo,
     redo,
   } = useContext();
@@ -45,6 +46,8 @@ const KeyboardHandler = () => {
         case 'Right': {
           if (canMove(level, Directions.RIGHT)) {
             move(Directions.RIGHT);
+          } else if (canPush(level, Directions.RIGHT)) {
+            push(Directions.RIGHT);
           }
           break;
         }
@@ -52,6 +55,8 @@ const KeyboardHandler = () => {
         case 'Left': {
           if (canMove(level, Directions.LEFT)) {
             move(Directions.LEFT);
+          } else if (canPush(level, Directions.LEFT)) {
+            push(Directions.LEFT);
           }
           break;
         }
@@ -59,6 +64,8 @@ const KeyboardHandler = () => {
         case 'Up': {
           if (canMove(level, Directions.UP)) {
             move(Directions.UP);
+          } else if (canPush(level, Directions.UP)) {
+            push(Directions.UP);
           }
           break;
         }
@@ -66,6 +73,8 @@ const KeyboardHandler = () => {
         case 'Down': {
           if (canMove(level, Directions.DOWN)) {
             move(Directions.DOWN);
+          } else if (canPush(level, Directions.DOWN)) {
+            push(Directions.DOWN);
           }
           break;
         }

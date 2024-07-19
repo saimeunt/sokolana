@@ -2,11 +2,18 @@ import { produce, enablePatches, Patch, applyPatches } from 'immer';
 enablePatches();
 
 import { Direction } from '@/lib/types';
-import { LevelState, defaultLevelState, loadLevel, move } from './level-state';
+import {
+  LevelState,
+  defaultLevelState,
+  loadLevel,
+  move,
+  push,
+} from './level-state';
 
 export type Action =
   | { type: 'LOAD_LEVEL'; payload: { levelData: string } }
   | { type: 'MOVE'; payload: { direction: Direction } }
+  | { type: 'PUSH'; payload: { direction: Direction } }
   | { type: 'UNDO' }
   | { type: 'REDO' };
 
@@ -37,6 +44,16 @@ export const reducer = produce((draft: State, action: Action) => {
     }
     case 'MOVE': {
       const [levelState, patches, inversePatches] = move(
+        draft.level,
+        action.payload.direction
+      );
+      draft.level = levelState;
+      draft.currentPatch++;
+      draft.patches[draft.currentPatch] = { patches, inversePatches };
+      break;
+    }
+    case 'PUSH': {
+      const [levelState, patches, inversePatches] = push(
         draft.level,
         action.payload.direction
       );

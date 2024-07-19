@@ -387,3 +387,12 @@ export const levels = [
 #   ###
 #####`,
 ];
+
+export const defaultEditorLevel = `########
+#      #
+#      #
+#      #
+#      #
+#      #
+#      #
+########`;
