@@ -1,0 +1,236 @@
+{
+  "address": "6CicGdVrwar4djSJoQmxdsCz73SEuGuUnoNdmYiqfvAe",
+  "metadata": {
+    "name": "minter",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
+  "instructions": [
+    {
+      "name": "create_nft",
+      "discriminator": [
+        231,
+        119,
+        61,
+        97,
+        217,
+        46,
+        142,
+        109
+      ],
+      "accounts": [
+        {
+          "name": "nft_account",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "nft_id_counter",
+          "writable": true
+        },
+        {
+          "name": "hash_storage",
+          "writable": true
+        },
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "height",
+          "type": "u8"
+        },
+        {
+          "name": "width",
+          "type": "u8"
+        },
+        {
+          "name": "data",
+          "type": "bytes"
+        }
+      ]
+    },
+    {
+      "name": "initialize_hash_storage",
+      "discriminator": [
+        121,
+        55,
+        27,
+        8,
+        88,
+        23,
+        84,
+        102
+      ],
+      "accounts": [
+        {
+          "name": "hash_storage",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "initialize_nft_id",
+      "discriminator": [
+        155,
+        194,
+        87,
+        115,
+        127,
+        243,
+        225,
+        226
+      ],
+      "accounts": [
+        {
+          "name": "nft_id_counter",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Counter",
+      "discriminator": [
+        255,
+        176,
+        4,
+        245,
+        188,
+        253,
+        124,
+        25
+      ]
+    },
+    {
+      "name": "HashStorage",
+      "discriminator": [
+        208,
+        85,
+        121,
+        34,
+        2,
+        191,
+        164,
+        45
+      ]
+    },
+    {
+      "name": "NftAccount",
+      "discriminator": [
+        33,
+        180,
+        91,
+        53,
+        236,
+        15,
+        63,
+        97
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "DataAlreadyExists",
+      "msg": "This map already exist"
+    },
+    {
+      "code": 6001,
+      "name": "WrongDymension",
+      "msg": "Width * height does not mathc data.len"
+    }
+  ],
+  "types": [
+    {
+      "name": "Counter",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "count",
+            "type": "u32"
+          }
+        ]
+      }
+    },
+    {
+      "name": "HashStorage",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "data_hashes",
+            "type": {
+              "vec": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "NftAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "id",
+            "type": "u32"
+          },
+          {
+            "name": "height",
+            "type": "u8"
+          },
+          {
+            "name": "width",
+            "type": "u8"
+          },
+          {
+            "name": "data",
+            "type": "bytes"
+          }
+        ]
+      }
+    }
+  ]
+}
