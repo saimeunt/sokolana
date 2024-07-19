@@ -56,7 +56,7 @@ export type Solver = {
       ],
       "accounts": [
         {
-          "name": "game",
+          "name": "gameState",
           "writable": true,
           "pda": {
             "seeds": [
@@ -127,10 +127,6 @@ export type Solver = {
         }
       ],
       "args": [
-        {
-          "name": "idNft",
-          "type": "u32"
-        },
         {
           "name": "directions",
           "type": "bytes"

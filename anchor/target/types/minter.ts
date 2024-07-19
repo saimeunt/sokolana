@@ -171,6 +171,11 @@ export type Minter = {
       "code": 6000,
       "name": "dataAlreadyExists",
       "msg": "This map already exist"
+    },
+    {
+      "code": 6001,
+      "name": "wrongDymension",
+      "msg": "Width * height does not mathc data.len"
     }
   ],
   "types": [

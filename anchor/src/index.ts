@@ -132,7 +132,7 @@ async function main() {
     tx = await solver.methods
     .initialize( id_nft)
     .accounts({
-          game : gamePDA,
+          gameState : gamePDA,
           otherData: nftAccount.publicKey,
           signer: game_authority.publicKey,
           systemProgram: SystemProgram.programId,

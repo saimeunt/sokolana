@@ -26,6 +26,9 @@ pub mod minter {
 
     pub fn create_nft(ctx: Context<CreateNft>, height: u8, width: u8, data: Vec<u8> ) -> Result<()> {
 
+        if usize::from(height*width) != data.len() {
+            return Err(ErrorCode::WrongDymension.into());
+        }
         let nft_account = &mut ctx.accounts.nft_account;
         let mint_counter = &mut ctx.accounts.nft_id_counter;
         mint_counter.count += 1;
@@ -137,6 +140,8 @@ pub struct HashStorage {
 pub enum ErrorCode {
     #[msg("This map already exist")]
     DataAlreadyExists,
+    #[msg("Width * height does not mathc data.len")]
+    WrongDymension,
     
 }
 

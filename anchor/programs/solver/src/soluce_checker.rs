@@ -18,7 +18,7 @@ pub struct Initialize<'info> {
         bump,
         space = 8 + 1 + 4 + 1 + 400 + 32 +32 + 8 + 8 + 200
     )]
-    pub game: Account<'info, GameState>,
+    pub game_state: Account<'info, GameState>,
 
     /// CHECK: We do not own this account
     other_data: UncheckedAccount<'info>, 
@@ -116,8 +116,8 @@ pub fn initialize(ctx: Context<Initialize>, id_nft:u32) -> Result<()> {
         return Err(ErrorCode::WrongNftId.into());
     }    
 
-    let game_account = &mut ctx.accounts.game;
-    game_account.id_nft = id_nft;
+    let game_account = &mut ctx.accounts.game_state;
+    game_account.id_nft = data_struct.id;
     game_account.nft_owner = data_struct.owner;
     game_account.solved = false;
     game_account.owner_reward_balance = 0;
@@ -177,7 +177,7 @@ pub fn claim(ctx: Context<Claim>) -> Result<()> {
 
 }
 
-pub fn solve(ctx: Context<Solve>, id_nft:u32,  directions: Vec<u8>) -> Result<()> {
+pub fn solve(ctx: Context<Solve>, directions: Vec<u8>) -> Result<()> {
    
     //Paiement des fees pour la cagnotte du NFT et son créateur 
     let lamports_to_transfer:u64 = 1_000_000;
@@ -210,13 +210,16 @@ pub fn solve(ctx: Context<Solve>, id_nft:u32,  directions: Vec<u8>) -> Result<()
         AccountDeserialize::try_deserialize(
             &mut data_slice,
         )?;
-
+    
+    if data_struct.id != game_account.id_nft {
+        return Err(ErrorCode::UnknownNFT.into());
+    }
     let width:u8 = data_struct.width;
     let height:u8 = data_struct.height;
     let map_data:Vec<u8> = data_struct.data.clone();
         
     
-    game_account.id_nft =id_nft;
+   
    
     if verify(map_data, width, height, &directions) {
         game_account.solved = true;
@@ -281,7 +284,7 @@ pub fn move_to(map_data:&mut Vec<u8>, width:u8, height:u8, player_position:&mut 
     //Vérification de la possibilité du mouvement 
     if new_position < 0 || new_position >= (width as i32) * (height as i32) {
         return Err(ErrorCode::IndexOutOfBounds.into());
-        //return ErrorCode::IndexOutOfBounds;
+        
     }
    
 

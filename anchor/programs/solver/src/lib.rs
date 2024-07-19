@@ -11,8 +11,8 @@ declare_id!("HRKSYCRNtAL3L9bmc5r2uUsYZr9QjMCxgvNRpat59jnH");
 pub mod solver {
     use super::*;
  
-    pub fn solve(ctx: Context<Solve>, id_nft:u32, directions: Vec<u8>) -> Result<()> {
-        soluce_checker::solve(ctx, id_nft, directions)
+    pub fn solve(ctx: Context<Solve>, directions: Vec<u8>) -> Result<()> {
+        soluce_checker::solve(ctx, directions)
     }
 
     pub fn claim(ctx: Context<Claim>) -> Result<()> {
