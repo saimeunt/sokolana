@@ -9,6 +9,8 @@ import { Minter } from './../target/types/minter';
 import { Solver } from './../target/types/solver';
 
 
+import { levels } from '/home/troy/Solana/sokolana/web/lib/levels';
+
 // Configure Anchor to use the local cluster.
 const provider = anchor.AnchorProvider.env();
 anchor.setProvider(provider);
@@ -18,16 +20,18 @@ const connection = provider.connection;
 const createNft = anchor.workspace.Minter as Program<Minter>;
 const solver = anchor.workspace.Solver as Program<Solver>;
 
-
 const lamports = 10 * LAMPORTS_PER_SOL;
 let game_authority = Keypair.generate();
 let creator_user =Keypair.generate();
 let player_user =Keypair.generate();
+let hashAccount = Keypair.generate();
 let compteurAccount = Keypair.generate();
 let nftAccount = Keypair.generate();
 let gamePDA = Keypair.generate().publicKey;
-
 let bump:number;
+
+
+let levelData: Buffer[] = [];
 
 const mapData = Buffer.from( [1, 1, 1, 1, 1, 1,
   1, 0, 0, 0, 0, 1,
@@ -37,6 +41,33 @@ const mapData = Buffer.from( [1, 1, 1, 1, 1, 1,
   1, 1 ,1 ,1, 1, 1]); 
 const width = 6;
 const height = 6;
+ 
+ function initLevel() {
+  for (let i = 0; i < levels.length; i++) {
+    levelData.push(convertLevelToUintArray(levels[i]));
+  }
+}
+
+ function convertLevelToUintArray(level: string): Buffer {
+  
+    const charToUintMap: { [key: string]: number } = {
+      ' ': 0,
+      '#': 1,
+      '@': 2,
+      '$': 3,
+      '.': 4,
+      '*': 5,
+      '+': 6
+    };
+
+    const uintArray: number[] = [];
+    for (const char of level) {
+        if (charToUintMap.hasOwnProperty(char)) {
+            uintArray.push(charToUintMap[char]);
+        }
+    }
+    return Buffer.from( uintArray);
+} 
 
 
 function displayMapData(mapData:ArrayBuffer) {
@@ -52,7 +83,7 @@ function displayMapData(mapData:ArrayBuffer) {
 }
 
 function displayBestSoluce(directions:ArrayBuffer) {
-  console.log("Best soluce:");
+console.log("Best soluce:");
   let line = " "
   for (let i = 0; i < directions.byteLength; i++) {
     line  += directions[i]
@@ -62,51 +93,69 @@ function displayBestSoluce(directions:ArrayBuffer) {
 
 }
 
-async function initWallet() {
+async function airDropWallet() {
 
-  creator_user =Keypair.generate();
-  player_user =Keypair.generate();
   let tx = await connection.requestAirdrop(creator_user.publicKey, lamports);
   tx = await connection.requestAirdrop(player_user.publicKey, lamports);
   tx = await connection.requestAirdrop(game_authority.publicKey, lamports);
   await connection.confirmTransaction(tx);
-  
 }
 
 
 async function main() {
     
-    await initWallet();
-    let tx =  await createNft.methods
-      .initializeNftId()
-      .accounts({
-        nftIdCounter:compteurAccount.publicKey,
-        user: game_authority.publicKey,
-      })
-      .signers([compteurAccount, game_authority])
-      .rpc();
+   initLevel();
+   for(let i=0; i< levelData.length; i++)
+   {
+      console.log("Level", i);
+      displayMapData(levelData[i]);
+      console.log(" ");
+   }
 
-      console.log("initialisation ok");
+    await airDropWallet();
+    //Initialisation du HashStorage
+    let tx =  await createNft.methods
+          .initializeHashStorage()
+          .accounts({
+              hashStorage :hashAccount.publicKey,
+              user: game_authority.publicKey,
+          })
+          .signers([ game_authority, hashAccount])
+          .rpc();
+
+    console.log("initialisation HashStorage : ok");    
+
+    tx =  await createNft.methods
+        .initializeNftId()
+        .accounts({
+            nftIdCounter:compteurAccount.publicKey,
+            user: game_authority.publicKey,
+        })
+        .signers([compteurAccount, game_authority])
+        .rpc();
+
+    console.log("initialisation id : ok");
   
-      tx = await createNft.methods
-      .createNft(width, height, mapData)
-      .accounts({
+    tx = await createNft.methods
+        .createNft(width, height, mapData)
+        .accounts({
             nftAccount: nftAccount.publicKey,
+            hashStorage: hashAccount.publicKey,
             nftIdCounter: compteurAccount.publicKey,
             user: creator_user.publicKey,
             
-      })
-      .signers([nftAccount, creator_user])
-      .rpc();
+        })
+        .signers([nftAccount, creator_user])
+        .rpc();
     
-      console.log("creation du nft Ok");
+    console.log("creation du nft Ok");
 
     let nftAccountInfo = await createNft.account.nftAccount.fetch(nftAccount.publicKey);
     console.log("id= ", nftAccountInfo.id )
     displayMapData(nftAccountInfo.data);
 
        /* ********************************************** Initialisation du solver et Vérificaiton d'une solution ****************************************** */
-
+      /*
 
     //Création de la seed du PDA
     const id_nft = 1;
@@ -132,7 +181,7 @@ async function main() {
     tx = await solver.methods
     .initialize( id_nft)
     .accounts({
-          gameState : gamePDA,
+          game : gamePDA,
           otherData: nftAccount.publicKey,
           signer: game_authority.publicKey,
           systemProgram: SystemProgram.programId,
@@ -151,7 +200,7 @@ async function main() {
    
 
     tx = await solver.methods
-    .solve( id_nft, moveSequence)
+    .solve(moveSequence)
     .accounts({
           game : gamePDA,
           otherData: nftAccount.publicKey,
@@ -188,7 +237,7 @@ async function main() {
     balanceUser = await provider.connection.getBalance(player_user.publicKey);
     console.log("Balance du PDA:", balancePda);
     console.log("Balance du user:", balanceUser);
-
+*/
   }
   
   main().catch(err => {
