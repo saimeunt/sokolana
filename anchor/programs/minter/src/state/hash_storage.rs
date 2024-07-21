@@ -4,5 +4,3 @@ use anchor_lang::prelude::*;
 pub struct HashStorage {
     pub data_hashes: Vec<[u8; 32]>,
 }
-
-
