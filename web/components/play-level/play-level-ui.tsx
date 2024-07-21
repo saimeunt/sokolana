@@ -33,11 +33,6 @@ export function PlayLevelUiModal({
       hide={hideModal}
       show={show}
       submit={async () => {
-        console.log({
-          directions: solutionToAccount(level.solution),
-          game: getGameAccount(Number(level.id)),
-          otherData: nftAccount.publicKey,
-        });
         await solve.mutateAsync({
           directions: solutionToAccount(level.solution),
           game: getGameAccount(Number(level.id)),

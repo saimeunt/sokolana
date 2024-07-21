@@ -45,7 +45,7 @@ export default function MintFeature({
     <div>
       <AppHero title="Mint" subtitle="Mint your own Sokolana levels">
         <div className="flex flex-col items-center space-y-4">
-          <LevelSvg level={level} zoom={4} solution={solution} />
+          <LevelSvg level={level} zoom={8} solution={solution} />
           <textarea
             ref={textAreaRef}
             className="font-mono"
