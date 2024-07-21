@@ -1,7 +1,6 @@
 'use client';
 
 import { getMinterProgram, getMinterProgramId } from '@sokolana/anchor';
-import { Program } from '@coral-xyz/anchor';
 import { useConnection } from '@solana/wallet-adapter-react';
 import { Cluster, Keypair, PublicKey } from '@solana/web3.js';
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -75,21 +74,6 @@ export function useMinterProgram() {
     onError: () => toast.error('Failed to mint NFT'),
   });
 
-  /* const initialize = useMutation({
-    mutationKey: ['counter', 'initialize', { cluster }],
-    mutationFn: (keypair: Keypair) =>
-      program.methods
-        .initialize()
-        .accounts({ counter: keypair.publicKey })
-        .signers([keypair])
-        .rpc(),
-    onSuccess: (signature) => {
-      transactionToast(signature);
-      return accounts.refetch();
-    },
-    onError: () => toast.error('Failed to initialize account'),
-  }); */
-
   return {
     program,
     programId,
@@ -98,64 +82,5 @@ export function useMinterProgram() {
     hashStorageAccounts,
     getProgramAccount,
     createNft,
-  };
-}
-
-export function useMinterProgramAccount({ account }: { account: PublicKey }) {
-  const { cluster } = useCluster();
-  const transactionToast = useTransactionToast();
-  const { program, nftAccounts } = useMinterProgram();
-
-  const accountQuery = useQuery({
-    queryKey: ['counter', 'fetch', { cluster, account }],
-    queryFn: () => program.account.counter.fetch(account),
-  });
-
-  /* const createNftMutation = useMutation({
-    mutationKey: ['minter', 'close', { cluster, account }],
-    mutationFn: () =>
-      program.methods.createNft().accounts({ counter: account }).rpc(),
-    onSuccess: (tx) => {
-      transactionToast(tx);
-      return accounts.refetch();
-    },
-  }); */
-
-  /* const decrementMutation = useMutation({
-    mutationKey: ['counter', 'decrement', { cluster, account }],
-    mutationFn: () =>
-      program.methods.decrement().accounts({ counter: account }).rpc(),
-    onSuccess: (tx) => {
-      transactionToast(tx);
-      return accountQuery.refetch();
-    },
-  });
-
-  const incrementMutation = useMutation({
-    mutationKey: ['counter', 'increment', { cluster, account }],
-    mutationFn: () =>
-      program.methods.increment().accounts({ counter: account }).rpc(),
-    onSuccess: (tx) => {
-      transactionToast(tx);
-      return accountQuery.refetch();
-    },
-  });
-
-  const setMutation = useMutation({
-    mutationKey: ['counter', 'set', { cluster, account }],
-    mutationFn: (value: number) =>
-      program.methods.set(value).accounts({ counter: account }).rpc(),
-    onSuccess: (tx) => {
-      transactionToast(tx);
-      return accountQuery.refetch();
-    },
-  }); */
-
-  return {
-    accountQuery,
-    /* closeMutation,
-    decrementMutation,
-    incrementMutation,
-    setMutation, */
   };
 }

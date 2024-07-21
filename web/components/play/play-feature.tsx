@@ -5,24 +5,37 @@ import LevelsView from './levels-view';
 import { useMinterProgram } from '@/lib/minter-data-access';
 import {
   accountToLevel,
+  accountToSolution,
   // loadLevel
 } from '@/components/context/level-state';
+import { useSolverProgram } from '@/lib/solver-data-access';
 
 const PlayFeature = () => {
   const { nftAccounts } = useMinterProgram();
-  if (nftAccounts.isLoading || !nftAccounts.data) {
+  const { gameStateAccounts } = useSolverProgram();
+  if (
+    nftAccounts.isLoading ||
+    !nftAccounts.data ||
+    gameStateAccounts.isLoading ||
+    !gameStateAccounts.data
+  ) {
     return null;
   }
-  const levels = nftAccounts.data.map(({ account }) => accountToLevel(account));
+  const levels = nftAccounts.data
+    .sort((a, b) => a.account.id - b.account.id)
+    .map(({ account }) => accountToLevel(account));
   /*const levels = levelsData.map((levelData, index) =>
     loadLevel(index.toString(), levelData)
   );*/
+  const bestSolutions = gameStateAccounts.data
+    .sort((a, b) => a.account.idNft - b.account.idNft)
+    .map(({ account }) =>
+      accountToSolution(levels[account.idNft - 1], account.bestSoluce)
+    );
   return (
     <div>
       <AppHero title="Play" subtitle="Choose a level to get started">
-        <LevelsView
-          levels={levels.sort((a, b) => Number(a.id) - Number(b.id))}
-        />
+        <LevelsView levels={levels} bestSolutions={bestSolutions} />
       </AppHero>
     </div>
   );

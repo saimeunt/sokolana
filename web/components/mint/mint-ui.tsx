@@ -6,6 +6,7 @@ import { useMinterProgram } from '@/lib/minter-data-access';
 import { levelToAccount, loadLevel } from '@/components/context/level-state';
 import { Input } from '@/lib/types';
 import { defaultEditorLevel } from '@/lib/levels';
+import { useSolverProgram } from '@/lib/solver-data-access';
 
 export function MintUiModal({
   hideModal,
@@ -23,6 +24,7 @@ export function MintUiModal({
   );
   const { nftAccounts, counterAccounts, hashStorageAccounts, createNft } =
     useMinterProgram();
+  const { initialize } = useSolverProgram();
   if (
     nftAccounts.isLoading ||
     !nftAccounts.data ||
@@ -41,14 +43,19 @@ export function MintUiModal({
       hide={hideModal}
       show={show}
       submit={async () => {
-        await createNft.mutateAsync({
-          ...levelToAccount(loadLevel('editor', levelData)),
-          nftAccount: Keypair.generate(),
-          nftIdCounter,
-          hashStorage,
-        });
+        const nftAccount = Keypair.generate();
+        const idNft = nftAccounts.data.length + 1;
+        await Promise.all([
+          createNft.mutateAsync({
+            ...levelToAccount(loadLevel('editor', levelData)),
+            nftAccount,
+            nftIdCounter,
+            hashStorage,
+          }),
+          initialize.mutateAsync({ idNft, otherData: nftAccount.publicKey }),
+        ]);
         setLevelData(defaultEditorLevel);
-        router.push(`/play/${nftAccounts.data.length + 1}`);
+        router.push(`/play/${idNft}`);
       }}
       submitLabel="Mint"
     >

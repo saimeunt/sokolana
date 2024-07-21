@@ -92,6 +92,50 @@ export const levelToAccount = (level: LevelState) => {
   return { width: level.width, height: level.height, data };
 };
 
+export const solutionToAccount = (solution: Input[]) => {
+  const Inputs = {
+    u: 1,
+    r: 2,
+    d: 3,
+    l: 4,
+    U: 1,
+    R: 2,
+    D: 3,
+    L: 4,
+  } as const;
+  return solution.map((input) => Inputs[input]);
+};
+
+export const accountToSolution = (level: LevelState, bestSoluce: Buffer) => {
+  const result: Input[] = [];
+  let currentLevel = structuredClone(level);
+  for (const bestSoluceInput of bestSoluce) {
+    const rawInput = bestSoluceInput as 1 | 2 | 3 | 4;
+    const SolutionPositionOffsets = {
+      1: { x: 0, y: -1 },
+      2: { x: 1, y: 0 },
+      3: { x: 0, y: 1 },
+      4: { x: -1, y: 0 },
+    } as const;
+    const offset = SolutionPositionOffsets[rawInput];
+    const playerPosition = getPlayerPosition(currentLevel);
+    const nextPlayerPosition = {
+      x: playerPosition.x + offset.x,
+      y: playerPosition.y + offset.y,
+    };
+    if (isCellBox(nextPlayerPosition, currentLevel)) {
+      const SolutionPushInputs = { 1: 'U', 2: 'R', 3: 'D', 4: 'L' } as const;
+      result.push(SolutionPushInputs[rawInput]);
+    } else {
+      const SolutionMoveInputs = { 1: 'u', 2: 'r', 3: 'd', 4: 'l' } as const;
+      result.push(SolutionMoveInputs[rawInput]);
+    }
+    const nextLevel = nextLevelState(currentLevel, result[result.length - 1]);
+    currentLevel = structuredClone(nextLevel);
+  }
+  return result;
+};
+
 export const getPlayerPosition = (level: LevelState) => {
   const [playerPosition] = getCellsPositions(level, Cells.PLAYER);
   const [playerOnBoxPosition] = getCellsPositions(level, Cells.PLAYER_ON_GOAL);
@@ -204,11 +248,11 @@ export const isMintable = (level: LevelState, solution: Input[]) => {
   return isFinished(currentLevel);
 };
 
-export const getMoves = (level: LevelState) =>
-  level.solution.filter((input) => input === input.toLowerCase()).length;
+export const getMoves = (solution: Input[]) =>
+  solution.filter((input) => input === input.toLowerCase()).length;
 
-export const getPushes = (level: LevelState) =>
-  level.solution.filter((input) => input === input.toUpperCase()).length;
+export const getPushes = (solution: Input[]) =>
+  solution.filter((input) => input === input.toUpperCase()).length;
 
 export const canMove = (level: LevelState, direction: Direction) => {
   const playerPosition = getPlayerPosition(level);

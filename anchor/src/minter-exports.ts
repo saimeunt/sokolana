@@ -21,7 +21,6 @@ export function getMinterProgramId(cluster: Cluster) {
     case 'devnet':
     case 'testnet':
       // This is the program ID for the Minter program on devnet and testnet.
-      // return new PublicKey('CounNZdmsQmWh7uVngV9FXW2dZ6zAgbJyYsvBpqbykg');
       return new PublicKey('5PVX8zjPwPJHKqoJFcfKCXQzHGv4RiMQrij6TeLFYPWZ');
     case 'mainnet-beta':
     default:

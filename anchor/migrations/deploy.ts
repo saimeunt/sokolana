@@ -4,14 +4,16 @@
 
 import * as anchor from '@coral-xyz/anchor';
 import { Program } from '@coral-xyz/anchor';
-import {
-  Keypair,
-  LAMPORTS_PER_SOL,
-  PublicKey,
-  SystemProgram,
-} from '@solana/web3.js';
+import { Keypair, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { Minter } from '../target/types/minter';
+import { Solver } from '../target/types/solver';
 import { levels } from './levels';
+
+/* const levels = [
+  `#####
+#@$.#
+#####`,
+]; */
 
 const lamports = 100 * LAMPORTS_PER_SOL;
 
@@ -45,9 +47,10 @@ const loadLevel = (levelData: string) => {
 module.exports = async function (provider) {
   // Configure client to use the provider.
   anchor.setProvider(provider);
-  const nftIdCounterAccount = Keypair.generate();
   const ownerAccount = Keypair.generate();
   const creatorAccount = Keypair.generate();
+  const playerAccount = Keypair.generate();
+  const nftIdCounterAccount = Keypair.generate();
   const hashStorageAccount = Keypair.generate();
   let tx = await provider.connection.requestAirdrop(
     ownerAccount.publicKey,
@@ -55,15 +58,21 @@ module.exports = async function (provider) {
   );
   await provider.connection.confirmTransaction(tx);
   console.log('owner airdropped');
-  // tx = await provider.connection.requestAirdrop(player_user.publicKey, lamports);
   tx = await provider.connection.requestAirdrop(
     creatorAccount.publicKey,
     lamports
   );
   await provider.connection.confirmTransaction(tx);
   console.log('creator airdropped');
+  tx = await provider.connection.requestAirdrop(
+    playerAccount.publicKey,
+    lamports
+  );
+  await provider.connection.confirmTransaction(tx);
+  console.log('player airdropped');
   // Add your deploy script here.
   const minter = anchor.workspace.Minter as Program<Minter>;
+  const solver = anchor.workspace.Solver as Program<Solver>;
   tx = await minter.methods
     .initializeNftId()
     .accounts({
@@ -101,6 +110,35 @@ module.exports = async function (provider) {
       .rpc();
     await provider.connection.confirmTransaction(tx);
     console.log(`level ${id} minted`);
+    tx = await solver.methods
+      .initialize(id)
+      .accounts({
+        otherData: nftAccount.publicKey,
+        signer: ownerAccount.publicKey,
+      })
+      .signers([ownerAccount])
+      .rpc();
+    await provider.connection.confirmTransaction(tx);
+    console.log(`level solver ${id} initialized`);
+    /* const [game] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.concat([
+          Buffer.from('Game'),
+          new Uint8Array(new Uint32Array([id]).buffer),
+        ]),
+      ],
+      solver.programId
+    );
+    tx = await solver.methods
+      .solve(Buffer.from([2]))
+      .accounts({
+        game,
+        otherData: nftAccount.publicKey,
+        signer: playerAccount.publicKey,
+      })
+      .signers([playerAccount])
+      .rpc();
+    await provider.connection.confirmTransaction(tx); */
     id++;
   }
 };
