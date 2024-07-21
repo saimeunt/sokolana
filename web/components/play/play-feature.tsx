@@ -1,20 +1,28 @@
 'use client';
-import { useEffect } from 'react';
 import { AppHero } from '../ui/ui-layout';
-import { levels } from '@/lib/levels';
+// import { levels as levelsData } from '@/lib/levels';
 import LevelsView from './levels-view';
-import useContext from '@/components/context/hook';
+import { useMinterProgram } from '@/lib/minter-data-access';
+import {
+  accountToLevel,
+  // loadLevel
+} from '@/components/context/level-state';
 
 const PlayFeature = () => {
-  const { loadLevel } = useContext();
-  useEffect(() => {
-    loadLevel(levels[0]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const { nftAccounts } = useMinterProgram();
+  if (nftAccounts.isLoading || !nftAccounts.data) {
+    return null;
+  }
+  const levels = nftAccounts.data.map(({ account }) => accountToLevel(account));
+  /*const levels = levelsData.map((levelData, index) =>
+    loadLevel(index.toString(), levelData)
+  );*/
   return (
     <div>
       <AppHero title="Play" subtitle="Choose a level to get started">
-        <LevelsView levels={levels} />
+        <LevelsView
+          levels={levels.sort((a, b) => Number(a.id) - Number(b.id))}
+        />
       </AppHero>
     </div>
   );

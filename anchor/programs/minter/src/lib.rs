@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use sha2::{Digest, Sha256};
 
-declare_id!("6CicGdVrwar4djSJoQmxdsCz73SEuGuUnoNdmYiqfvAe");
+declare_id!("5PVX8zjPwPJHKqoJFcfKCXQzHGv4RiMQrij6TeLFYPWZ");
 
 #[program]
 pub mod minter {

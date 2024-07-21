@@ -1,8 +1,8 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { AppHero } from '../ui/ui-layout';
-import { defaultEditorLevel, levels } from '@/lib/levels';
+import { defaultEditorLevel } from '@/lib/levels';
 import LevelView from './level-view';
 import { useLocalStorage } from 'usehooks-ts';
 import useContext from '@/components/context/hook';
@@ -11,23 +11,31 @@ import {
   isFinished,
   getMoves,
   getPushes,
+  accountToLevelData,
 } from '@/components/context/level-state';
+import { useMinterProgram } from '@/lib/minter-data-access';
 
 const PlayLevelFeature = ({ id }: { id: string }) => {
+  const { nftAccounts } = useMinterProgram();
   const [showModal, setShowModal] = useState(false);
   const {
     state: { level },
   } = useContext();
-  const finished = isFinished(level);
-  console.log('play level finished', finished);
-  useEffect(() => {
-    if (finished) {
-      setShowModal(true);
-    }
-  }, [finished]);
   const [editorLevelData] = useLocalStorage('editor-level', defaultEditorLevel);
   const isEditor = id === 'editor';
-  const levelData = isEditor ? editorLevelData : levels[Number(id)];
+  if (nftAccounts.isLoading || !nftAccounts.data) {
+    return null;
+  }
+  const progamAccount = nftAccounts.data.find(
+    ({ account }) => account.id === Number(id)
+  );
+  if (!isEditor && !progamAccount) {
+    return null;
+  }
+  const accountLevelData = progamAccount
+    ? accountToLevelData(progamAccount.account)
+    : '';
+  const levelData = isEditor ? editorLevelData : accountLevelData;
   return (
     <div>
       <AppHero
@@ -35,20 +43,23 @@ const PlayLevelFeature = ({ id }: { id: string }) => {
         subtitle={`Moves/Pushes ${getMoves(level)}/${getPushes(level)}`}
       >
         <div className="space-y-4">
-          <LevelView levelData={levelData} />
+          <LevelView id={id} levelData={levelData} />
           <div className="space-y-1">
-            {isEditor && (
-              <Link href="/mint">
-                <button className="btn btn-primary">Back to editor</button>
+            {isEditor ? (
+              <Link href={`/mint?solution=${level.solution.join('')}`}>
+                <button className="btn btn-primary">
+                  {isFinished(level) ? 'Ready to mint!' : 'Back to editor'}
+                </button>
               </Link>
-            )}
-            {!isEditor && isFinished(level) && (
-              <button
-                className="btn btn-primary"
-                onClick={() => setShowModal(true)}
-              >
-                Submit solution
-              </button>
+            ) : (
+              isFinished(level) && (
+                <button
+                  className="btn btn-primary"
+                  onClick={() => setShowModal(true)}
+                >
+                  Submit solution
+                </button>
+              )
             )}
             <p>Move: Arrow Keys</p>
             <p>Undo: U</p>
@@ -56,7 +67,6 @@ const PlayLevelFeature = ({ id }: { id: string }) => {
           </div>
         </div>
         <PlayLevelUiModal
-          isEditor={isEditor}
           show={showModal}
           hideModal={() => setShowModal(false)}
         />

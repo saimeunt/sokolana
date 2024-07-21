@@ -5,8 +5,8 @@ import { Direction } from '@/lib/types';
 
 const Hook = () => {
   const { state, dispatch } = useContext(Context);
-  const loadLevel = (levelData: string) =>
-    dispatch({ type: 'LOAD_LEVEL', payload: { levelData } });
+  const loadLevel = (id: string, levelData: string) =>
+    dispatch({ type: 'LOAD_LEVEL', payload: { id, levelData } });
   const move = (direction: Direction) =>
     dispatch({ type: 'MOVE', payload: { direction } });
   const push = (direction: Direction) =>

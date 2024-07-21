@@ -4,13 +4,13 @@ import { useIsClient } from 'usehooks-ts';
 import LevelSvg from '../ui/level-svg';
 import KeyboardHandler from './keyboard-handler';
 
-const LevelView = ({ levelData }: { levelData: string }) => {
+const LevelView = ({ id, levelData }: { id: string; levelData: string }) => {
   const {
     state: { level },
     loadLevel,
   } = useContext();
   useEffect(
-    () => loadLevel(levelData),
+    () => loadLevel(id, levelData),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [levelData]
   );

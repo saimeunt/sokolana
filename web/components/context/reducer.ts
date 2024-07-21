@@ -11,7 +11,7 @@ import {
 } from './level-state';
 
 export type Action =
-  | { type: 'LOAD_LEVEL'; payload: { levelData: string } }
+  | { type: 'LOAD_LEVEL'; payload: { id: string; levelData: string } }
   | { type: 'MOVE'; payload: { direction: Direction } }
   | { type: 'PUSH'; payload: { direction: Direction } }
   | { type: 'UNDO' }
@@ -37,7 +37,7 @@ export const defaultState = (): State => ({
 export const reducer = produce((draft: State, action: Action) => {
   switch (action.type) {
     case 'LOAD_LEVEL': {
-      draft.level = loadLevel(action.payload.levelData);
+      draft.level = loadLevel(action.payload.id, action.payload.levelData);
       draft.currentPatch = -1;
       draft.patches = [];
       break;

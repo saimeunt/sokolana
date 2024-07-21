@@ -40,7 +40,7 @@ export default function MintFeature({
   if (!isClient) {
     return null;
   }
-  const level = loadLevel(levelData);
+  const level = loadLevel('editor', levelData);
   return (
     <div>
       <AppHero title="Mint" subtitle="Mint your own Sokolana levels">
@@ -57,14 +57,15 @@ export default function MintFeature({
             value={levelData}
           />
           <div className="space-x-6">
-            <Link href="/play/editor">
-              <button
-                className="btn btn-secondary"
-                disabled={!isTestable(level)}
-              >
+            {isTestable(level) ? (
+              <Link href="/play/editor">
+                <button className="btn btn-secondary">Test</button>
+              </Link>
+            ) : (
+              <button className="btn btn-secondary" disabled>
                 Test
               </button>
-            </Link>
+            )}
             <button
               className="btn btn-primary"
               onClick={() => setShowModal(true)}
@@ -114,7 +115,11 @@ export default function MintFeature({
             </div>
           </div>
         </div>
-        <MintUiModal show={showModal} hideModal={() => setShowModal(false)} />
+        <MintUiModal
+          show={showModal}
+          hideModal={() => setShowModal(false)}
+          solution={solution}
+        />
       </AppHero>
     </div>
   );

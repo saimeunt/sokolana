@@ -1,17 +1,16 @@
 import { ImageResponse } from 'next/og';
 
-import { loadLevel } from '@/components/context/level-state';
+import { LevelState, loadLevel } from '@/components/context/level-state';
 import { levels } from '@/lib/levels';
 import LevelSvg from '@/components/ui/level-svg';
 
 const MetaImage = ({
-  levelData,
+  level,
   size: { width, height },
 }: {
-  levelData: string;
+  level: LevelState;
   size: { width: number; height: number };
 }) => {
-  const level = loadLevel(levelData);
   const horizontalRatio = Math.floor(width / (level.width * 8));
   const verticalRatio = Math.floor(height / (level.height * 8));
   const ratio = Math.min(horizontalRatio, verticalRatio);
@@ -24,6 +23,7 @@ export const contentType = 'image/png';
 
 const handler = async ({ params: { id } }: { params: { id: string } }) => {
   const levelData = levels[Number(id)];
+  const level = loadLevel(id, levelData);
   return new ImageResponse(
     (
       <div
@@ -35,7 +35,7 @@ const handler = async ({ params: { id } }: { params: { id: string } }) => {
           background: '#fff',
         }}
       >
-        <MetaImage levelData={levelData} size={size} />
+        <MetaImage level={level} size={size} />
       </div>
     ),
     size

@@ -5,7 +5,7 @@ use crate::soluce_checker::*;
 mod soluce_checker;
 
 
-declare_id!("HRKSYCRNtAL3L9bmc5r2uUsYZr9QjMCxgvNRpat59jnH");
+declare_id!("Dxz9KW7PbRBfcyymgNVR59jJe8cscrhgkJixHYg9eGB1");
 
 #[program]
 pub mod solver {

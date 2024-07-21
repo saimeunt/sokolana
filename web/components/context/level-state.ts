@@ -11,6 +11,7 @@ import {
 import { indexToPosition, positionToIndex } from '@/lib/utils';
 
 export type LevelState = {
+  id: string;
   width: number;
   height: number;
   data: Cell[];
@@ -18,13 +19,14 @@ export type LevelState = {
 };
 
 export const defaultLevelState = (): LevelState => ({
+  id: '',
   width: 0,
   height: 0,
   data: [],
   solution: [],
 });
 
-export const loadLevel = (levelData: string): LevelState => {
+export const loadLevel = (id: string, levelData: string): LevelState => {
   const rows = levelData.split('\n').filter((row) => row !== '');
   const width = rows.reduce(
     (previousValue, row) => Math.max(previousValue, row.length),
@@ -39,7 +41,55 @@ export const loadLevel = (levelData: string): LevelState => {
       ],
       []
     );
-  return { width, height: rows.length, data, solution: [] };
+  return { id, width, height: rows.length, data, solution: [] };
+};
+
+export const accountToLevelData = ({
+  width,
+  height,
+  data,
+}: {
+  width: number;
+  height: number;
+  data: Uint8Array;
+}) => {
+  const AccountDataCells = [
+    Cells.FLOOR,
+    Cells.WALL,
+    Cells.PLAYER,
+    Cells.BOX,
+    Cells.GOAL,
+    Cells.BOX_ON_GOAL,
+    Cells.PLAYER_ON_GOAL,
+  ] as const;
+  const cells = [...data].map((cell) => AccountDataCells[cell]);
+  let result = '';
+  for (let i = 0; i < height; i++) {
+    const row = cells.slice(i * width, i * width + width).join('');
+    result += `${row}\n`;
+  }
+  return result;
+};
+
+export const accountToLevel = (account: {
+  id: number;
+  width: number;
+  height: number;
+  data: Uint8Array;
+}): LevelState => loadLevel(account.id.toString(), accountToLevelData(account));
+
+export const levelToAccount = (level: LevelState) => {
+  const Cells = {
+    ' ': 0,
+    '#': 1,
+    '@': 2,
+    $: 3,
+    '.': 4,
+    '*': 5,
+    '+': 6,
+  } as const;
+  const data = level.data.map((cell) => Cells[cell]);
+  return { width: level.width, height: level.height, data };
 };
 
 export const getPlayerPosition = (level: LevelState) => {
@@ -143,6 +193,9 @@ export const nextLevelState = (level: LevelState, input: Input) => {
 };
 
 export const isMintable = (level: LevelState, solution: Input[]) => {
+  if (!isTestable(level)) {
+    return false;
+  }
   let currentLevel = structuredClone(level);
   for (const input of solution) {
     const nextLevel = nextLevelState(currentLevel, input);
