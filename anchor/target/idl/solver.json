@@ -214,6 +214,10 @@
           {
             "name": "leader_reward_balance",
             "type": "u64"
+          },
+          {
+            "name": "last_request_result",
+            "type": "u8"
           }
         ]
       }

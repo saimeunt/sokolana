@@ -1,4 +1,4 @@
-/* import * as dotenv from 'dotenv';
+import * as dotenv from 'dotenv';
 dotenv.config();
 
 import * as anchor from '@coral-xyz/anchor';
@@ -12,6 +12,8 @@ import {
 import { Minter } from './../target/types/minter';
 import { Solver } from './../target/types/solver';
 
+import { levels } from '../migrations/levels';
+
 // Configure Anchor to use the local cluster.
 const provider = anchor.AnchorProvider.env();
 anchor.setProvider(provider);
@@ -23,13 +25,15 @@ const solver = anchor.workspace.Solver as Program<Solver>;
 
 const lamports = 10 * LAMPORTS_PER_SOL;
 const game_authority = Keypair.generate();
-let creator_user = Keypair.generate();
-let player_user = Keypair.generate();
+const creator_user = Keypair.generate();
+const player_user = Keypair.generate();
+const hashAccount = Keypair.generate();
 const compteurAccount = Keypair.generate();
 const nftAccount = Keypair.generate();
-let gamePDA = Keypair.generate().publicKey;
-
+const gamePDA = Keypair.generate().publicKey;
 let bump: number;
+
+const levelData: Buffer[] = [];
 
 const mapData = Buffer.from([
   1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 2, 0, 0, 0, 1, 1, 0, 3, 0, 0, 1, 1, 0,
@@ -37,6 +41,32 @@ const mapData = Buffer.from([
 ]);
 const width = 6;
 const height = 6;
+
+function initLevel() {
+  for (let i = 0; i < levels.length; i++) {
+    levelData.push(convertLevelToUintArray(levels[i]));
+  }
+}
+
+function convertLevelToUintArray(level: string): Buffer {
+  const charToUintMap: { [key: string]: number } = {
+    ' ': 0,
+    '#': 1,
+    '@': 2,
+    $: 3,
+    '.': 4,
+    '*': 5,
+    '+': 6,
+  };
+
+  const uintArray: number[] = [];
+  for (const char of level) {
+    if (charToUintMap.hasOwnProperty(char)) {
+      uintArray.push(charToUintMap[char]);
+    }
+  }
+  return Buffer.from(uintArray);
+}
 
 function displayMapData(mapData: ArrayBuffer) {
   console.log('Map data:');
@@ -59,9 +89,7 @@ function displayBestSoluce(directions: ArrayBuffer) {
   console.log(line);
 }
 
-async function initWallet() {
-  creator_user = Keypair.generate();
-  player_user = Keypair.generate();
+async function airDropWallet() {
   let tx = await connection.requestAirdrop(creator_user.publicKey, lamports);
   tx = await connection.requestAirdrop(player_user.publicKey, lamports);
   tx = await connection.requestAirdrop(game_authority.publicKey, lamports);
@@ -69,8 +97,27 @@ async function initWallet() {
 }
 
 async function main() {
-  await initWallet();
+  initLevel();
+  for (let i = 0; i < levelData.length; i++) {
+    console.log('Level', i);
+    displayMapData(levelData[i]);
+    console.log(' ');
+  }
+
+  await airDropWallet();
+  //Initialisation du HashStorage
   let tx = await createNft.methods
+    .initializeHashStorage()
+    .accounts({
+      hashStorage: hashAccount.publicKey,
+      user: game_authority.publicKey,
+    })
+    .signers([game_authority, hashAccount])
+    .rpc();
+
+  console.log('initialisation HashStorage : ok');
+
+  tx = await createNft.methods
     .initializeNftId()
     .accounts({
       nftIdCounter: compteurAccount.publicKey,
@@ -79,12 +126,13 @@ async function main() {
     .signers([compteurAccount, game_authority])
     .rpc();
 
-  console.log('initialisation ok');
+  console.log('initialisation id : ok');
 
   tx = await createNft.methods
     .createNft(width, height, mapData)
     .accounts({
       nftAccount: nftAccount.publicKey,
+      hashStorage: hashAccount.publicKey,
       nftIdCounter: compteurAccount.publicKey,
       user: creator_user.publicKey,
     })
@@ -99,86 +147,92 @@ async function main() {
   console.log('id= ', nftAccountInfo.id);
   displayMapData(nftAccountInfo.data);
 
-  // ********************************************** Initialisation du solver et Vérificaiton d'une solution ******************************************
+  /* ********************************************** Initialisation du solver et Vérificaiton d'une solution ****************************************** */
+  /*
 
-  //Création de la seed du PDA
-  const id_nft = 1;
-  const idBytes = new Uint8Array(new Uint32Array([id_nft]).buffer);
-  const seeds = Buffer.concat([Buffer.from('Game'), idBytes]);
+    //Création de la seed du PDA
+    const id_nft = 1;
+    const idBytes = new Uint8Array(new Uint32Array([id_nft]).buffer);
+    const seeds =
+    Buffer.concat([
+    Buffer.from('Game'),
+    idBytes,
+    ]);
 
-  //Récupération de l'adresse du PDA associé à id_nft
-  [gamePDA, bump] = await PublicKey.findProgramAddress(
-    [seeds],
-    solver.programId
-  );
+    //Récupération de l'adresse du PDA associé à id_nft
+    [gamePDA, bump] = await PublicKey.findProgramAddress(
+      [seeds],
+      solver.programId
+    );
 
-  //Affichag des balance du signer et du PDA avant la demande de solve
-  let balanceUser = await provider.connection.getBalance(player_user.publicKey);
-  let balancePda = await provider.connection.getBalance(gamePDA);
-  console.log('BalancePDA', balancePda);
-  console.log('BalanceUser', balanceUser);
+    //Affichag des balance du signer et du PDA avant la demande de solve
+    let balanceUser = await provider.connection.getBalance(player_user.publicKey);
+    let balancePda = await provider.connection.getBalance(gamePDA);
+    console.log("BalancePDA", balancePda);
+    console.log("BalanceUser", balanceUser)
 
-  tx = await solver.methods
-    .initialize(id_nft)
+    tx = await solver.methods
+    .initialize( id_nft)
     .accounts({
-      gameState: gamePDA,
-      otherData: nftAccount.publicKey,
-      signer: game_authority.publicKey,
-      systemProgram: SystemProgram.programId,
+          game : gamePDA,
+          otherData: nftAccount.publicKey,
+          signer: game_authority.publicKey,
+          systemProgram: SystemProgram.programId,
     })
     .signers([game_authority])
     .rpc();
 
-  let updatedGame = await solver.account.gameState.fetch(gamePDA);
-  console.log('solved = ', updatedGame.solved);
-  console.log('id_nft=', updatedGame.idNft);
-  console.log('Pubkey du owner du nft', updatedGame.nftOwner);
+    let updatedGame = await solver.account.gameState.fetch(gamePDA);
+    console.log("solved = ", updatedGame.solved)
+    console.log("id_nft=", updatedGame.idNft);
+    console.log("Pubkey du owner du nft", updatedGame.nftOwner);
 
-  //Demande de résolution d'une séquence de mouvement
-  const moveSequence = Buffer.from([3, 1, 3, 2, 1, 2, 3]);
 
-  tx = await solver.methods
-    .solve(id_nft, moveSequence)
+    //Demande de résolution d'une séquence de mouvement
+    const moveSequence = Buffer.from( [3,1,3, 2,1,2,3]);
+
+
+    tx = await solver.methods
+    .solve(moveSequence)
     .accounts({
-      game: gamePDA,
-      otherData: nftAccount.publicKey,
-      signer: player_user.publicKey,
+          game : gamePDA,
+          otherData: nftAccount.publicKey,
+          signer: player_user.publicKey,
     })
     .signers([player_user])
     .rpc();
 
-  //Affichage des éléments du PDA pour vérification
-  updatedGame = await solver.account.gameState.fetch(gamePDA);
-  console.log('solved = ', updatedGame.solved);
-  displayBestSoluce(updatedGame.bestSoluce);
-  console.log('longueur best soluce=', updatedGame.bestSoluce.length);
-  console.log('Pubkey best soluce', updatedGame.leader);
+    //Affichage des éléments du PDA pour vérification
+    updatedGame = await solver.account.gameState.fetch(gamePDA);
+    console.log("solved = ", updatedGame.solved)
+    displayBestSoluce(updatedGame.bestSoluce);
+    console.log("longueur best soluce=", updatedGame.bestSoluce.length);
+    console.log("Pubkey best soluce", updatedGame.leader);
 
-  // Affichage des balances arpès la résolution
-  balancePda = await provider.connection.getBalance(gamePDA);
-  balanceUser = await provider.connection.getBalance(player_user.publicKey);
-  console.log('Balance du PDA:', balancePda);
-  console.log('Balance du user:', balanceUser);
+    // Affichage des balances arpès la résolution
+    balancePda = await provider.connection.getBalance(gamePDA);
+    balanceUser = await provider.connection.getBalance(player_user.publicKey);
+    console.log("Balance du PDA:", balancePda);
+    console.log("Balance du user:", balanceUser);
 
-  // Claim de la cagnotte par le leader du niveau
-  tx = await solver.methods
+    // Claim de la cagnotte par le leader du niveau
+    tx = await solver.methods
     .claim()
     .accounts({
-      game: gamePDA,
-      signer: player_user.publicKey,
+          game : gamePDA,
+          signer: player_user.publicKey,
     })
     .signers([player_user])
     .rpc();
 
-  console.log('Claim Ok');
-  balancePda = await provider.connection.getBalance(gamePDA);
-  balanceUser = await provider.connection.getBalance(player_user.publicKey);
-  console.log('Balance du PDA:', balancePda);
-  console.log('Balance du user:', balanceUser);
+    console.log("Claim Ok")
+    balancePda = await provider.connection.getBalance(gamePDA);
+    balanceUser = await provider.connection.getBalance(player_user.publicKey);
+    console.log("Balance du PDA:", balancePda);
+    console.log("Balance du user:", balanceUser);
+*/
 }
 
 main().catch((err) => {
   console.error(err);
-}); */
-
-export * from './minter-exports';
+});

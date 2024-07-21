@@ -1,32 +1,11 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 
+use crate::errors::ErrorCode;
+use crate::state::{GameState, NftAccount};
 
 
-//  use minter::cpi::accounts::GetNftData;
-//  use minter::program::Minter;
-//  use minter::{self, NftAccount};
 
-
-#[derive(Accounts)]
-#[instruction(id_nft:u32)]
-pub struct Initialize<'info> {
-    #[account(
-        init,
-        payer = signer,
-        seeds = [b"Game", &id_nft.to_le_bytes()], 
-        bump,
-        space = 8 + 1 + 4 + 1 + 400 + 32 +32 + 8 + 8 + 200
-    )]
-    pub game_state: Account<'info, GameState>,
-
-    /// CHECK: We do not own this account
-    other_data: UncheckedAccount<'info>, 
-  
-    #[account(mut)]
-    pub signer: Signer<'info>,
-    pub system_program: Program<'info, System>,
-}
 
 #[derive(Accounts)]
 pub struct Solve<'info> {
@@ -47,20 +26,6 @@ pub struct Solve<'info> {
 
 
 
-#[derive(Accounts)]
-pub struct Claim<'info> {
-    /*
-    #[account(
-        mut,
-        constraint = is_authorized(&game, &leader) @ ErrorCode::NotAuthorized
-    )] */
-    #[account(mut)] 
-    pub game: Account<'info, GameState>,
-    
-    #[account(mut)]
-    pub signer: Signer<'info>,
-    pub system_program: Program<'info, System>,
-}
 
 
 
@@ -86,44 +51,8 @@ impl<'info> GetData<'info> {
 }
 */
 
-#[account]
-pub struct NftAccount {
-    pub owner: Pubkey,
-    pub id: u32,
-    pub height: u8,
-    pub width: u8,
-    pub data: Vec<u8>,
-}
 
 
-pub fn initialize(ctx: Context<Initialize>, id_nft:u32) -> Result<()> {
-
-    //Récupération des données du NFT
-    let nft_account = &ctx.accounts.other_data;
-
-    if nft_account.data_is_empty() {
-        return Err(ErrorCode::UnknownNFT.into());
-    }
-
-    let mut data_slice: &[u8] = &nft_account.data.borrow();
-
-    let data_struct:NftAccount = 
-        AccountDeserialize::try_deserialize(
-            &mut data_slice,
-        )?;
-
-    if id_nft != data_struct.id {
-        return Err(ErrorCode::WrongNftId.into());
-    }    
-
-    let game_account = &mut ctx.accounts.game_state;
-    game_account.id_nft = data_struct.id;
-    game_account.nft_owner = data_struct.owner;
-    game_account.solved = false;
-    game_account.owner_reward_balance = 0;
-    game_account.leader_reward_balance = 0;
-    Ok(())
-}
 
 
 /*
@@ -143,39 +72,7 @@ pub fn set_id(ctx: Context<GetData>, data: u32) -> Result<()> {
 }
 */
 
-pub fn claim(ctx: Context<Claim>) -> Result<()> {
 
-
-    if ctx.accounts.game.leader != *ctx.accounts.signer.key && ctx.accounts.game.nft_owner != *ctx.accounts.signer.key {
-        return Err(ErrorCode::NotAuthorized.into());  
-    }
-
-    let mut lamports_to_transfer:u64 = 0;
-    if ctx.accounts.game.leader == *ctx.accounts.signer.key {
-        lamports_to_transfer = ctx.accounts.game.leader_reward_balance;
-        ctx.accounts.game.leader_reward_balance = 0;
-    }
-
-    if ctx.accounts.game.nft_owner == *ctx.accounts.signer.key {
-        lamports_to_transfer = ctx.accounts.game.owner_reward_balance;
-        ctx.accounts.game.owner_reward_balance = 0;
-    }
-   
-    **ctx
-            .accounts
-            .game
-            .to_account_info()
-            .try_borrow_mut_lamports()? -= lamports_to_transfer;
-    **ctx
-            .accounts
-            .signer
-            .to_account_info()
-            .try_borrow_mut_lamports()? += lamports_to_transfer;
-    
-    
-    return Ok(());
-
-}
 
 pub fn solve(ctx: Context<Solve>, directions: Vec<u8>) -> Result<bool> {
    
@@ -200,9 +97,8 @@ pub fn solve(ctx: Context<Solve>, directions: Vec<u8>) -> Result<bool> {
     //Récupération des données du NFT
     let nft_data = &ctx.accounts.other_data;
 
-    if nft_data.data_is_empty() {
-        return Err(ErrorCode::UnknownNFT.into());
-    }
+    require!(!nft_data.data_is_empty(), ErrorCode::UnknownNFT);
+    
 
     let mut data_slice: &[u8] = &nft_data.data.borrow();
 
@@ -211,9 +107,8 @@ pub fn solve(ctx: Context<Solve>, directions: Vec<u8>) -> Result<bool> {
             &mut data_slice,
         )?;
     
-    if data_struct.id != game_account.id_nft {
-        return Err(ErrorCode::UnknownNFT.into());
-    }
+    require!(data_struct.id == game_account.id_nft, ErrorCode::UnknownNFT);
+    
     let width:u8 = data_struct.width;
     let height:u8 = data_struct.height;
     let map_data:Vec<u8> = data_struct.data.clone();
@@ -223,16 +118,17 @@ pub fn solve(ctx: Context<Solve>, directions: Vec<u8>) -> Result<bool> {
    
     if verify(map_data, width, height, &directions)? {
         game_account.solved = true;
-
+        game_account.last_request_result = 2;
         if directions.len() < game_account.best_soluce.len() || game_account.best_soluce.len() == 0  {
             game_account.best_soluce = directions.clone();
             game_account.leader = ctx.accounts.signer.key(); 
+            game_account.last_request_result = 3;
         }
-        msg!("Solve successful");
+        
         return Ok(true);
     }
 
-    msg!("Solve fail");
+    game_account.last_request_result = 1;
     return Ok(false);
 }
 
@@ -286,10 +182,9 @@ pub fn move_to(map_data:&mut Vec<u8>, width:u8, height:u8, player_position:&mut 
     }
    
     //Vérification de la possibilité du mouvement 
-    if new_position < 0 || new_position >= (width as i32) * (height as i32) {
-        return Err(ErrorCode::IndexOutOfBounds.into());
+    require!(new_position >= 0 && new_position < (width as i32) * (height as i32), ErrorCode::IndexOutOfBounds);
         
-    }
+    
    
 
     // Vérifier de la présence d'un le mur
@@ -302,9 +197,8 @@ pub fn move_to(map_data:&mut Vec<u8>, width:u8, height:u8, player_position:&mut 
     if map_data[ new_position as usize] == 3 || map_data[ new_position as usize] == 5 {
         let new_position2 = new_position + inc as i32;
 
-        if new_position2 < 0 {
-            return Err(ErrorCode::IndexOutOfBounds.into());
-        }
+        require!( new_position2 >= 0, ErrorCode::IndexOutOfBounds);
+        
 
         // La caisse ne peut pas bouger car bloquer par un mur ou une caisse
         if map_data[ new_position2 as usize] != 0 && map_data[ new_position2 as usize] != 4 {
@@ -351,18 +245,8 @@ pub fn move_to(map_data:&mut Vec<u8>, width:u8, height:u8, player_position:&mut 
 
 
 
-#[account]
-pub struct GameState {
-    pub id_nft:u32,
-    pub solved:bool,
-    pub best_soluce:Vec<u8>,
-    pub leader:Pubkey,
-    pub nft_owner:Pubkey,
-    pub owner_reward_balance:u64,
-    pub leader_reward_balance:u64,
-   
 
-}
+    
     // 0 vide
     // 1 wall
     // 2 player 
@@ -374,21 +258,3 @@ pub struct GameState {
 
 
 
-
-#[error_code]
-pub enum ErrorCode {
-    #[msg("Index out of bounds.")]
-    IndexOutOfBounds,
-    #[msg("Unknown direction.")]
-    UnknownDirection,
-    #[msg("Wrong data.")]
-    InitialisationFailed,
-    #[msg("Invalid Account.")]
-    InvalidAccount,
-    #[msg("Not Authorized.")]
-    NotAuthorized,
-    #[msg("Unknown NFT.")]
-    UnknownNFT,
-    #[msg("Wrong NFT Id.")]
-    WrongNftId,
-}
