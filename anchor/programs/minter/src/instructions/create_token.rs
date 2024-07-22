@@ -1,6 +1,7 @@
 #![allow(clippy::result_large_err)]
 
 use crate::state::{NftAccount};
+use crate::errors::ErrorCode;
 
 
 use {
@@ -53,6 +54,8 @@ pub fn mint_nft(ctx: Context<CreateToken>, nft_name: String, nft_symbol: String,
             name: nft_name,
             symbol: nft_symbol,
             uri: nft_uri,
+            // width : width,
+            // height : height,
             seller_fee_basis_points: 0,
             creators: None,
             collection: None,

@@ -6,5 +6,6 @@ pub enum ErrorCode {
     DataAlreadyExists,
     #[msg("Width * height does not mathc data.len")]
     WrongDymension,
-    
+    #[msg("Unauthorized signer")]
+    UnauthorizedSigner
 }

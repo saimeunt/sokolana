@@ -3,9 +3,12 @@ import { Solver } from './../target/types/solver';
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { Keypair, Connection, LAMPORTS_PER_SOL, PublicKey, clusterApiUrl } from "@solana/web3.js";
+import { getAssociatedTokenAddressSync, getMinimumBalanceForRentExemptAccountWithExtensions } from '@solana/spl-token';
 import * as assert from "assert";
+
+
 let solver = anchor.workspace.Solver as Program<Solver>;
-let createNft =  anchor.workspace.Minter as Program<Minter>;
+let minter =  anchor.workspace.Minter as Program<Minter>;
 const { BN } = anchor.BN; 
 
 const connection = new Connection('http://localhost:8899', 'confirmed');
@@ -18,14 +21,24 @@ const fee = LAMPORTS_PER_SOL / 1000;
 let game_authority = Keypair.generate();
 let creator_user =Keypair.generate();
 let player_user =Keypair.generate();
-let compteurAccount = Keypair.generate();
-let nftAccount = Keypair.generate();
+let counterAccount = Keypair.generate();
+let nftAccount2 = Keypair.generate();
 let gamePDA = Keypair.generate().publicKey;
 let hashAccount = Keypair.generate();
+const mintKeypair = new Keypair();
 let bump:number;
+let associatedTokenAccountAddress = getAssociatedTokenAddressSync(mintKeypair.publicKey, creator_user.publicKey);
 
 //Déclaration des données pour la création d'un NFT
 let id_nft = 1;
+const metadata = {
+    name: 'Level 1',
+    symbol: 'LVL1',
+    uri: 'https://raw.githubusercontent.com/solana-developers/program-examples/new-examples/tokens/tokens/.assets/nft.json',
+   
+  };
+
+
 const mapData = Buffer.from( [1, 1, 1, 1, 1, 1,
   1, 0, 0, 0, 0, 1,
   1, 2, 0, 0, 0, 1,
@@ -34,6 +47,7 @@ const mapData = Buffer.from( [1, 1, 1, 1, 1, 1,
   1, 1 ,1 ,1, 1, 1]); 
 const width = 6;
 const height = 6;
+
 
 /* ************************************************************** Fonction d'affichage pour les Vec de mapData et de Soluce ****************************** */
 function displayMapData(mapData:ArrayBuffer) {
@@ -63,7 +77,7 @@ function displayBestSoluce(directions:ArrayBuffer) {
 
 async function initProgram() {
   solver = anchor.workspace.Solver as Program<Solver>;
-  createNft =  anchor.workspace.Minter as Program<Minter>;
+  minter =  anchor.workspace.Minter as Program<Minter>;
 
 }
 
@@ -72,10 +86,12 @@ async function initWallet() {
   game_authority = Keypair.generate();
   creator_user =Keypair.generate();
   player_user =Keypair.generate();
-  compteurAccount = Keypair.generate();
-  nftAccount = Keypair.generate();
+  counterAccount = Keypair.generate();
+  nftAccount2 = Keypair.generate();
   gamePDA = Keypair.generate().publicKey;
   hashAccount = Keypair.generate();
+  
+  associatedTokenAccountAddress = getAssociatedTokenAddressSync(mintKeypair.publicKey, creator_user.publicKey);
   
   let tx = await connection.requestAirdrop(creator_user.publicKey, lamports);
   tx = await connection.requestAirdrop(player_user.publicKey, lamports);
@@ -86,7 +102,7 @@ async function initWallet() {
 
 async function initNft() {
   
-  let tx =  await createNft.methods
+  let tx =  await minter.methods
       .initializeHashStorage()
       .accounts({
           hashStorage :hashAccount.publicKey,
@@ -95,30 +111,59 @@ async function initNft() {
       .signers([ game_authority, hashAccount])
       .rpc();
 
-    tx =  await createNft.methods
+    tx =  await minter.methods
        .initializeNftId()
        .accounts({
-            nftIdCounter:compteurAccount.publicKey,
+            nftIdCounter:counterAccount.publicKey,
             user: game_authority.publicKey,
        })
-      .signers([compteurAccount,  game_authority])
+      .signers([counterAccount,  game_authority])
       .rpc();
 
 }
 
 async function createNFT() {
 
-   let tx = await createNft.methods
+   let tx = await minter.methods
       .createNft(width, height, mapData)
       .accounts({
-          nftAccount: nftAccount.publicKey,
+          nftAccount: nftAccount2.publicKey,
           hashStorage: hashAccount.publicKey,
-          nftIdCounter: compteurAccount.publicKey,
+          nftIdCounter: counterAccount.publicKey,
           user: creator_user.publicKey,
       })
-      .signers([nftAccount, creator_user])
+      .signers([nftAccount2, creator_user])
       .rpc();
 }
+
+
+async function getMetadataAddress(mintPublicKey:PublicKey) {
+    // Le programme ID du programme de métadonnées de Metaplex
+    const METAPLEX_PROGRAM_ID = new PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
+  
+    // Adresse du compte de métadonnées
+    const [metadataAddress] = PublicKey.findProgramAddressSync(
+        [
+            Buffer.from('metadata'),
+            METAPLEX_PROGRAM_ID.toBuffer(),
+            mintPublicKey.toBuffer()
+        ],
+        METAPLEX_PROGRAM_ID,
+    );
+  
+    return metadataAddress;
+  }
+  
+  
+  async function fetchMetadata(c:Connection, metadataAddress:PublicKey) {
+    const metadataAccount = await connection.getAccountInfo(metadataAddress);
+    if (metadataAccount === null) {
+        throw new Error('Metadata account not found');
+    }
+  
+    return metadata;
+  }
+
 
 async function getSolverSeedFromId(id:number) {
 
@@ -143,7 +188,7 @@ async function initSolver() {
       .initialize(id_nft)
       .accounts({
           game : gamePDA,
-          otherData: nftAccount.publicKey,
+          otherData: nftAccount2.publicKey,
           signer: game_authority.publicKey,
       })
       .signers([game_authority])
@@ -155,7 +200,7 @@ async function solveSequence() {
         .solve(moveSequence)
         .accounts({
             game : gamePDA,
-            otherData: nftAccount.publicKey,
+            otherData: nftAccount2.publicKey,
             signer: player_user.publicKey,
         })
         .signers([player_user])
@@ -174,7 +219,7 @@ async function solveSequence() {
       describe("Hash Data Initialisation", () => {
       
           it("should set the length of hashdata to 0", async () => {
-              let tx =  await createNft.methods
+              let tx =  await minter.methods
                   .initializeHashStorage()
                   .accounts({
                       hashStorage :hashAccount.publicKey,
@@ -183,7 +228,7 @@ async function solveSequence() {
                   .signers([ game_authority, hashAccount])
                   .rpc();
 
-              let hashdata = await createNft.account.hashStorage.fetch(hashAccount.publicKey);
+              let hashdata = await minter.account.hashStorage.fetch(hashAccount.publicKey);
               assert.equal(hashdata.dataHashes.length, 0);
           }); 
 
@@ -192,16 +237,16 @@ async function solveSequence() {
       describe("Counter NFT Initialisation", () => {
 
           it("should set count to 0 ", async () => {
-              let tx =  await createNft.methods
+              let tx =  await minter.methods
                   .initializeNftId()
                   .accounts({
-                      nftIdCounter:compteurAccount.publicKey,
+                      nftIdCounter:counterAccount.publicKey,
                       user: game_authority.publicKey,
                   })
-                  .signers([compteurAccount,  game_authority])
+                  .signers([counterAccount,  game_authority])
                   .rpc();
 
-              let compteur = await createNft.account.counter.fetch(compteurAccount.publicKey);
+              let compteur = await minter.account.counter.fetch(counterAccount.publicKey);
               assert.equal(compteur.count, 0);
           });
 
@@ -217,15 +262,15 @@ async function solveSequence() {
 
             let wrongWidth = 4;
             try {
-                let tx = await createNft.methods
+                let tx = await minter.methods
                     .createNft(wrongWidth, height, mapData)
                     .accounts({
-                        nftAccount: nftAccount.publicKey,
+                        nftAccount: nftAccount2.publicKey,
                         hashStorage: hashAccount.publicKey,
-                        nftIdCounter: compteurAccount.publicKey,
+                        nftIdCounter: counterAccount.publicKey,
                         user: creator_user.publicKey,
                     })
-                    .signers([nftAccount, creator_user])
+                    .signers([nftAccount2, creator_user])
                     .rpc();
                 assert.fail("Expected an error but none was thrown");
             } catch (err) {
@@ -237,18 +282,18 @@ async function solveSequence() {
 
         it("should assign the NFT with correct parameters !", async () => {
      
-            let tx = await createNft.methods
+            let tx = await minter.methods
                 .createNft(width, height, mapData)
                 .accounts({
-                    nftAccount: nftAccount.publicKey,
+                    nftAccount: nftAccount2.publicKey,
                     hashStorage: hashAccount.publicKey,
-                    nftIdCounter: compteurAccount.publicKey,
+                    nftIdCounter: counterAccount.publicKey,
                     user: creator_user.publicKey,
                 })
-                .signers([nftAccount, creator_user])
+                .signers([nftAccount2, creator_user])
                 .rpc();
     
-            let nftAccountInfo = await createNft.account.nftAccount.fetch(nftAccount.publicKey);
+            let nftAccountInfo = await minter.account.nftAccount.fetch(nftAccount2.publicKey);
             assert.equal(nftAccountInfo.owner.toString(), creator_user.publicKey.toString());
             assert.equal(nftAccountInfo.id, 1);
             assert.equal(nftAccountInfo.height, height);
@@ -261,12 +306,12 @@ async function solveSequence() {
 
             try {
                 let newNftAccount = Keypair.generate();
-                let tx = await createNft.methods
+                let tx = await minter.methods
                     .createNft(width, height, mapData)
                     .accounts({
                         nftAccount: newNftAccount.publicKey,
                         hashStorage: hashAccount.publicKey,
-                        nftIdCounter: compteurAccount.publicKey,
+                        nftIdCounter: counterAccount.publicKey,
                         user: creator_user.publicKey,
                     })
                     .signers([newNftAccount, creator_user])
@@ -281,7 +326,7 @@ async function solveSequence() {
 
         it("Should increase the counter of id to 2  !", async () => {
            
-           
+          
             await createNFT();
             let newNftAccount = Keypair.generate();
             const mapData2 = Buffer.from( [1, 1, 1, 1, 1, 1,
@@ -292,23 +337,58 @@ async function solveSequence() {
                                            1, 1 ,1 ,1, 1, 1]); 
             const width = 6;
             const height = 6;
-            let tx = await createNft.methods
+            let tx = await minter.methods
                 .createNft(width, height, mapData2)
                 .accounts({
                     nftAccount: newNftAccount.publicKey,
                     hashStorage: hashAccount.publicKey,
-                    nftIdCounter: compteurAccount.publicKey,
+                    nftIdCounter: counterAccount.publicKey,
                     user: creator_user.publicKey,
             })
             .signers([newNftAccount, creator_user])
             .rpc();
     
-            let nftAccountInfo = await createNft.account.nftAccount.fetch(newNftAccount.publicKey);
+            let nftAccountInfo = await minter.account.nftAccount.fetch(newNftAccount.publicKey);
             assert.equal(nftAccountInfo.id, 2);
         });
   
     });
+
+    describe.only("Function MinfNft Metaplex", () => {  
+
+        beforeEach(async function() {
+            await initNft();
+            await createNFT();
+        });
+
+        it('Create an NFT with the metadata on Metaplex !', async () => {
+   
+            // await initWallet();
+            // await initNft();
+            // await createNFT();
+        
+            const transactionSignature = await minter.methods
+              .mintNft(metadata.name, metadata.symbol, metadata.uri)
+              .accounts({
+                payer: creator_user.publicKey,
+                mintAccount: mintKeypair.publicKey,
+                nftAccount: nftAccount2.publicKey,
+                associatedTokenAccount: associatedTokenAccountAddress,
+                   
+              })
+              .signers([mintKeypair, creator_user])
+              .rpc();
+        
+            await connection.confirmTransaction(transactionSignature);
+            const metadataAdress = await getMetadataAddress(mintKeypair.publicKey);
+            const data = await fetchMetadata(connection, metadataAdress);
+            assert.equal(data, metadata);
+    
+    
+        });
   
+    });
+
 });
 
 describe("Solver Program", () => {
@@ -330,7 +410,7 @@ describe("Solver Program", () => {
                .initialize(id_nft)
                .accounts({
                    game : gamePDA,
-                   otherData: nftAccount.publicKey,
+                   otherData: nftAccount2.publicKey,
                    signer: game_authority.publicKey,
                })
                .signers([game_authority])
@@ -355,7 +435,7 @@ describe("Solver Program", () => {
                   .initialize(wrong_id_nft)
                   .accounts({
                       game : gamePDA,
-                      otherData: nftAccount.publicKey,
+                      otherData: nftAccount2.publicKey,
                       signer: game_authority.publicKey,
                   })
                   .signers([game_authority])
@@ -382,7 +462,7 @@ describe("Solver Program", () => {
           .solve(moveSequence)
           .accounts({
               game : gamePDA,
-              otherData: nftAccount.publicKey,
+              otherData: nftAccount2.publicKey,
               signer: player_user.publicKey,
           })
           .signers([player_user])
@@ -427,7 +507,7 @@ describe("Solver Program", () => {
           .solve(moveSequence)
           .accounts({
               game : gamePDA,
-              otherData: nftAccount.publicKey,
+              otherData: nftAccount2.publicKey,
               signer: player_user.publicKey,
           })
           .signers([player_user])
@@ -452,7 +532,7 @@ describe("Solver Program", () => {
           .solve(moveSequence)
           .accounts({
               game : gamePDA,
-              otherData: nftAccount.publicKey,
+              otherData: nftAccount2.publicKey,
               signer: player_user.publicKey,
           })
           .signers([player_user])
@@ -476,7 +556,7 @@ describe("Solver Program", () => {
           .solve(moveSequence)
           .accounts({
               game : gamePDA,
-              otherData: nftAccount.publicKey,
+              otherData: nftAccount2.publicKey,
               signer: player_user.publicKey,
           })
           .signers([player_user])

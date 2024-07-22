@@ -17,13 +17,14 @@ const provider = anchor.AnchorProvider.env();
    const mintKeypair = new Keypair();
 
    // Derive the associated token address account for the mint and payer.
-   const associatedTokenAccountAddress = getAssociatedTokenAddressSync(mintKeypair.publicKey, payer.publicKey);
+   
 
   // The metadata for our NFT
   const metadata = {
     name: 'Homer NFT',
     symbol: 'HOMR',
     uri: 'https://raw.githubusercontent.com/solana-developers/program-examples/new-examples/tokens/tokens/.assets/nft.json',
+   
   };
 
   const lamports = 10 * LAMPORTS_PER_SOL;
@@ -33,6 +34,7 @@ const provider = anchor.AnchorProvider.env();
   let  counterAccount = Keypair.generate();
   let nftAccount2 = Keypair.generate();
   let  hashAccount = Keypair.generate();
+  let associatedTokenAccountAddress = getAssociatedTokenAddressSync(mintKeypair.publicKey, creator_user.publicKey);
 
 
   let id_nft = 1;
@@ -81,6 +83,8 @@ async function initWallet() {
     counterAccount = Keypair.generate();
     nftAccount2 = Keypair.generate();
     hashAccount = Keypair.generate();
+    associatedTokenAccountAddress = getAssociatedTokenAddressSync(mintKeypair.publicKey, creator_user.publicKey);
+
     
     let tx = await connection.requestAirdrop(creator_user.publicKey, lamports);
     tx = await connection.requestAirdrop(player_user.publicKey, lamports);
@@ -141,13 +145,13 @@ describe('NFT Minter', () => {
     const transactionSignature = await minter.methods
       .mintNft(metadata.name, metadata.symbol, metadata.uri)
       .accounts({
-        payer: payer.publicKey,
+        payer: creator_user.publicKey,
         mintAccount: mintKeypair.publicKey,
         nftAccount: nftAccount2.publicKey,
         associatedTokenAccount: associatedTokenAccountAddress,
            
       })
-      .signers([mintKeypair])
+      .signers([mintKeypair, creator_user])
       .rpc();
 
     console.log('Success!');
@@ -166,7 +170,7 @@ describe('NFT Minter', () => {
     const metadataAdress = await getMetadataAddress(mintKeypair.publicKey);
     console.log("Addresse des metadatas : ", metadataAdress.toBase58());
     const data = await fetchMetadata(connection, metadataAdress);
-    console.log("Metadata :", metadata);
+    console.log("Metadata :", data);
 
 
   });
