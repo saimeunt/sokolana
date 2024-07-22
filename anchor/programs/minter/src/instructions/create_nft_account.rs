@@ -13,6 +13,7 @@ pub struct CreateNft<'info> {
     #[account(
         init,
         payer = user,
+        
        // seeds = [b"NFT", &id_nft.to_le_bytes()],
         space = 8 + 32 + 4 + 1 + 1 + 1000 + (height as usize * width as usize)
     )]

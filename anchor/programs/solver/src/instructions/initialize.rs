@@ -13,7 +13,7 @@ pub struct Initialize<'info> {
         payer = signer,
         seeds = [b"Game", &id_nft.to_le_bytes()], 
         bump,
-        space = 8 + 1 + 4 + 1 + 1 + 1+ 400 + 32 +32 + 8 + 8 + 200
+        space = 8 + 1 + 4 + 1 + 1 + 1+ 400 + 32 +32 + 8 + 8
     )]
     pub game_state: Account<'info, GameState>,
 
