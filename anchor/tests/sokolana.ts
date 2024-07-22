@@ -354,7 +354,7 @@ async function solveSequence() {
   
     });
 
-    describe.only("Function MinfNft Metaplex", () => {  
+    describe("Function MinfNft Metaplex", () => {  
 
         beforeEach(async function() {
             await initNft();
