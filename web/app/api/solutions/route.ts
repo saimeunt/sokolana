@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Input, Cells } from '@/lib/types';
+import { AnchorProvider, Wallet } from '@coral-xyz/anchor';
+import { Connection, Keypair } from '@solana/web3.js';
+import { getMinterProgram } from '@sokolana/anchor';
 import {
   getFloorPositions,
   getWallsPositions,
@@ -12,6 +15,7 @@ import {
   LevelState,
   loadLevel,
   getCellsPositions,
+  accountToLevelData,
 } from '@/components/context/level-state';
 import { levels } from '@/lib/levels';
 
@@ -163,13 +167,26 @@ const levelSvg = ({
 
 export const GET = async (request: NextRequest) => {
   const id = request.nextUrl.searchParams.get('id') as string;
-  // const level = request.nextUrl.searchParams.get('level') as string;
-  // this should be fetched on-chain
-  const level = levels[Number(id) - 1];
+  const connection = new Connection('http://localhost:8899');
+  const provider = new AnchorProvider(
+    connection,
+    new Wallet(Keypair.generate()),
+    {
+      commitment: 'confirmed',
+    }
+  );
+  const program = getMinterProgram(provider);
+  const nftAccounts = await program.account.nftAccount.all();
+  const nftAccount = nftAccounts.find(
+    ({ account }) => account.id === Number(id)
+  );
+  const levelData = nftAccount
+    ? accountToLevelData(nftAccount.account)
+    : levels[Number(id) - 1];
   const solution = request.nextUrl.searchParams.get('solution') as string;
   const zoom = request.nextUrl.searchParams.get('zoom');
   const svg = levelSvg({
-    level: loadLevel(id, level),
+    level: loadLevel(id, levelData),
     zoom: Number(zoom || '10'),
     solution: solution.split('') as Input[],
   });
