@@ -142,7 +142,7 @@ pub associated_token_program: Program<'info, AssociatedToken>,
 pub system_program: Program<'info, System>,
 pub rent: Sysvar<'info, Rent>,
 
-#[account(mut, has_one = owner)]
+#[account(mut)]
 pub nft_account: Account<'info, NftAccount>,
 
 }
