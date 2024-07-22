@@ -12,7 +12,7 @@ pub struct CreateNft<'info> {
     #[account(
         init,
         payer = user,
-        space = 8 + 32 + 4 + 1 + 1 + 1000 + (height as usize * width as usize)
+        space = 8 + 32 + 4 + 1 + 1 + 64 + (height as usize * width as usize)
     )]
     pub nft_account: Account<'info, NftAccount>,
   
