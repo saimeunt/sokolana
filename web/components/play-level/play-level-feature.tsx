@@ -1,8 +1,10 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
+import { useWallet } from '@solana/wallet-adapter-react';
 import { AppHero } from '../ui/ui-layout';
 import { defaultEditorLevel } from '@/lib/levels';
+import { Keypair } from '@solana/web3.js';
 import LevelView from './level-view';
 import { useLocalStorage } from 'usehooks-ts';
 import useContext from '@/components/context/hook';
@@ -16,11 +18,12 @@ import {
   loadLevel,
 } from '@/components/context/level-state';
 import { useMinterProgram } from '@/lib/minter-data-access';
-import { useSolverProgram } from '@/lib/solver-data-access';
+import { useSolverProgram, getGameAccount } from '@/lib/solver-data-access';
 
 const PlayLevelFeature = ({ id }: { id: string }) => {
-  const { nftAccounts } = useMinterProgram();
-  const { gameStateAccounts } = useSolverProgram();
+  const { publicKey } = useWallet();
+  const { nftAccounts, mintNft } = useMinterProgram();
+  const { gameStateAccounts, claim } = useSolverProgram();
   const [showModal, setShowModal] = useState(false);
   const {
     state: { level },
@@ -54,6 +57,26 @@ const PlayLevelFeature = ({ id }: { id: string }) => {
         gameStateAccount.account.bestSoluce
       )
     : [];
+  const hasOwnerRewards = () => {
+    if (!gameStateAccount || !nftAccount || !publicKey) {
+      return false;
+    }
+    return (
+      nftAccount.account.owner.equals(publicKey) &&
+      BigInt(gameStateAccount.account.ownerRewardBalance.toString()) > BigInt(0)
+    );
+  };
+  const hasLeaderRewards = () => {
+    if (!gameStateAccount || !publicKey) {
+      return false;
+    }
+    return (
+      gameStateAccount.account.leader.equals(publicKey) &&
+      BigInt(gameStateAccount.account.leaderRewardBalance.toString()) >
+        BigInt(0)
+    );
+  };
+  const hasRewards = hasOwnerRewards() || hasLeaderRewards();
   return (
     <div>
       <AppHero
@@ -72,14 +95,51 @@ const PlayLevelFeature = ({ id }: { id: string }) => {
                 </button>
               </Link>
             ) : (
-              isFinished(level) && (
-                <button
-                  className="btn btn-primary"
-                  onClick={() => setShowModal(true)}
-                >
-                  Submit solution
-                </button>
-              )
+              <div className="space-x-6">
+                {hasRewards && (
+                  <button
+                    className="btn btn-accent"
+                    onClick={() => {
+                      claim.mutateAsync({ game: getGameAccount(Number(id)) });
+                    }}
+                  >
+                    Claim rewards
+                  </button>
+                )}
+                {isFinished(level) && (
+                  <>
+                    <button
+                      className="btn btn-primary"
+                      onClick={() => setShowModal(true)}
+                    >
+                      Submit solution
+                    </button>
+                    <button
+                      className="btn btn-secondary"
+                      onClick={async () => {
+                        if (!nftAccount) {
+                          return;
+                        }
+                        const mintAccount = Keypair.generate();
+                        await mintNft.mutateAsync({
+                          nftName: `Solution for level ${id}`,
+                          nftSymbol: `LVL${id}`,
+                          nftUri: new URL(
+                            `/api/tokens?id=${id}&solution=${level.solution.join(
+                              ''
+                            )}`,
+                            'http://localhost:3000'
+                          ).href,
+                          mintAccount,
+                          nftAccount: nftAccount.publicKey,
+                        });
+                      }}
+                    >
+                      Mint solution
+                    </button>
+                  </>
+                )}
+              </div>
             )}
             <p>
               Moves/Pushes {getMoves(level.solution)}/

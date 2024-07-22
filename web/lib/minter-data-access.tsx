@@ -71,6 +71,36 @@ export function useMinterProgram() {
       transactionToast(signature);
       return nftAccounts.refetch();
     },
+    onError: () => toast.error('Failed to create NFT'),
+  });
+
+  const mintNft = useMutation({
+    mutationKey: ['minter', 'mintNft', { cluster }],
+    mutationFn: ({
+      nftName,
+      nftSymbol,
+      nftUri,
+      mintAccount,
+      nftAccount,
+    }: {
+      nftName: string;
+      nftSymbol: string;
+      nftUri: string;
+      mintAccount: Keypair;
+      nftAccount: PublicKey;
+    }) =>
+      program.methods
+        .mintNft(nftName, nftSymbol, nftUri)
+        .accounts({
+          mintAccount: mintAccount.publicKey,
+          nftAccount,
+        })
+        .signers([mintAccount])
+        .rpc(),
+    onSuccess: (signature) => {
+      transactionToast(signature);
+      return nftAccounts.refetch();
+    },
     onError: () => toast.error('Failed to mint NFT'),
   });
 
@@ -82,5 +112,6 @@ export function useMinterProgram() {
     hashStorageAccounts,
     getProgramAccount,
     createNft,
+    mintNft,
   };
 }

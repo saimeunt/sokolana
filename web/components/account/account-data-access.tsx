@@ -11,6 +11,8 @@ import {
   TransactionSignature,
   VersionedTransaction,
 } from '@solana/web3.js';
+import { fetchDigitalAsset } from '@metaplex-foundation/mpl-token-metadata';
+import umi from '@/lib/umi';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { useTransactionToast } from '../ui/ui-layout';
@@ -50,7 +52,17 @@ export function useGetTokenAccounts({ address }: { address: PublicKey }) {
           programId: TOKEN_2022_PROGRAM_ID,
         }),
       ]);
-      return [...tokenAccounts.value, ...token2022Accounts.value];
+      const tokenAccountsEnriched = await Promise.all(
+        tokenAccounts.value.map(async (tokenAccount) => {
+          const asset = await fetchDigitalAsset(
+            umi(connection.rpcEndpoint),
+            tokenAccount.account.data.parsed.info.mint
+          );
+          tokenAccount.account.data.parsed.asset = asset;
+          return tokenAccount;
+        })
+      );
+      return [...tokenAccountsEnriched, ...token2022Accounts.value];
     },
   });
 }
@@ -125,7 +137,7 @@ export function useRequestAirdrop({ address }: { address: PublicKey }) {
 
   return useMutation({
     mutationKey: ['airdrop', { endpoint: connection.rpcEndpoint, address }],
-    mutationFn: async (amount: number = 1) => {
+    mutationFn: async (amount = 1) => {
       const [latestBlockhash, signature] = await Promise.all([
         connection.getLatestBlockhash(),
         connection.requestAirdrop(address, amount * LAMPORTS_PER_SOL),

@@ -164,6 +164,7 @@ export function AccountTokens({ address }: { address: PublicKey }) {
                 <tr>
                   <th>Public Key</th>
                   <th>Mint</th>
+                  <th>NFT</th>
                   <th className="text-right">Balance</th>
                 </tr>
               </thead>
@@ -189,6 +190,23 @@ export function AccountTokens({ address }: { address: PublicKey }) {
                           />
                         </span>
                       </div>
+                    </td>
+                    <td>
+                      <a
+                        href={account.data.parsed.asset.metadata.uri.replace(
+                          'tokens',
+                          'solutions'
+                        )}
+                        target="_blank"
+                      >
+                        <img
+                          src={`${account.data.parsed.asset.metadata.uri.replace(
+                            'tokens',
+                            'solutions'
+                          )}&zoom=1`}
+                          alt="solution"
+                        />
+                      </a>
                     </td>
                     <td className="text-right">
                       <span className="font-mono">

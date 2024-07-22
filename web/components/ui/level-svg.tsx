@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import {
   LevelState,
   getCellsPositions,
@@ -6,7 +7,7 @@ import {
 import { Cells, Input, InputPositionOffsets, Position } from '@/lib/types';
 import { indexToPosition, positionToIndex } from '@/lib/utils';
 
-const getFloorPositions = (level: LevelState) =>
+export const getFloorPositions = (level: LevelState) =>
   level.data.reduce<Position[]>(
     (previousValue, currentValue, index) =>
       currentValue === Cells.FLOOR ||
@@ -17,7 +18,7 @@ const getFloorPositions = (level: LevelState) =>
     []
   );
 
-const getWallsPositions = (level: LevelState) => {
+export const getWallsPositions = (level: LevelState) => {
   const walls = getCellsPositions(level, Cells.WALL);
   const wallsPositions = [];
   const plainWallsPositions = [];
@@ -38,14 +39,18 @@ const getWallsPositions = (level: LevelState) => {
   return { wallsPositions, plainWallsPositions };
 };
 
-const duration = (solution: Input[]) => `${(solution.length + 2) * 0.2}s`;
+export const duration = (solution: Input[]) =>
+  `${(solution.length + 2) * 0.2}s`;
 
-const keyTimes = (solution: Input[]) =>
+export const keyTimes = (solution: Input[]) =>
   Array.from({ length: solution.length + 2 }, (_, i) => i)
     .map((i) => i / (solution.length + 1))
     .join(';');
 
-const playerPositions = (initialPosition: Position, solution: Input[]) => {
+export const playerPositions = (
+  initialPosition: Position,
+  solution: Input[]
+) => {
   const result = solution.reduce<Position[]>(
     (previousValue, currentValue) => {
       const offset = InputPositionOffsets[currentValue];
@@ -62,7 +67,7 @@ const playerPositions = (initialPosition: Position, solution: Input[]) => {
   return result;
 };
 
-const boxPositions = (
+export const boxPositions = (
   initialPosition: Position,
   level: LevelState,
   solution: Input[]
@@ -199,10 +204,10 @@ const LevelSvg = ({
       </use>
     ))}
     {getCellsPositions(level, Cells.PLAYER_ON_GOAL).map(({ x, y }) => (
-      <>
-        <use key={`goal-${x}-${y}`} href="#goal" x={x * 5} y={y * 5} />
-        <use key={`player-${x}-${y}`} href="#player" x={x * 5} y={y * 5} />
-      </>
+      <Fragment key={`player-on-goal-${x}-${y}`}>
+        <use href="#goal" x={x * 5} y={y * 5} />
+        <use href="#player" x={x * 5} y={y * 5} />
+      </Fragment>
     ))}
     {getCellsPositions(level, Cells.BOX).map(({ x, y }) => (
       <use key={`box-${x}-${y}`} href="#box" x={x * 5} y={y * 5}>

@@ -401,6 +401,11 @@
       "code": 6001,
       "name": "WrongDymension",
       "msg": "Width * height does not mathc data.len"
+    },
+    {
+      "code": 6002,
+      "name": "UnauthorizedSigner",
+      "msg": "Unauthorized signer"
     }
   ],
   "types": [

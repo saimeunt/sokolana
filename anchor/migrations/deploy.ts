@@ -139,6 +139,18 @@ module.exports = async function (provider) {
       .signers([playerAccount])
       .rpc();
     await provider.connection.confirmTransaction(tx); */
+    /* const mintAccount = Keypair.generate();
+    tx = await minter.methods
+      .mintNft(`Level ${id}`, `LVL${id}`, 'http://example.com')
+      .accounts({
+        mintAccount: mintAccount.publicKey,
+        nftAccount: nftAccount.publicKey,
+        payer: creatorAccount.publicKey,
+      })
+      .signers([mintAccount, creatorAccount])
+      .rpc();
+    await provider.connection.confirmTransaction(tx);
+    console.log(`level nft ${id} minted`); */
     id++;
   }
 };

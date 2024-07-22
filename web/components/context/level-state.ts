@@ -1,4 +1,5 @@
-import { produceWithPatches } from 'immer';
+import { produceWithPatches, enablePatches } from 'immer';
+enablePatches();
 import {
   Cell,
   Direction,

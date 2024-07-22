@@ -86,6 +86,17 @@ export function useSolverProgram() {
     onError: () => toast.error('Failed to solve'),
   });
 
+  const claim = useMutation({
+    mutationKey: ['solver', 'claim', { cluster }],
+    mutationFn: ({ game }: { game: PublicKey }) =>
+      program.methods.claim().accounts({ game }).rpc(),
+    onSuccess: (signature) => {
+      transactionToast(signature);
+      return gameStateAccounts.refetch();
+    },
+    onError: () => toast.error('Failed to claim'),
+  });
+
   return {
     program,
     programId,
@@ -93,5 +104,6 @@ export function useSolverProgram() {
     getProgramAccount,
     initialize,
     solve,
+    claim,
   };
 }
