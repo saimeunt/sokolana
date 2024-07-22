@@ -407,6 +407,11 @@ export type Minter = {
       "code": 6001,
       "name": "wrongDymension",
       "msg": "Width * height does not mathc data.len"
+    },
+    {
+      "code": 6002,
+      "name": "unauthorizedSigner",
+      "msg": "Unauthorized signer"
     }
   ],
   "types": [
