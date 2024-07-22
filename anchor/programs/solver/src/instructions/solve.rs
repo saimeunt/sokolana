@@ -24,56 +24,6 @@ pub struct Solve<'info> {
 }
 
 
-
-
-
-
-
-/*
-#[derive(Accounts)]
-pub struct GetData<'info> {
-    #[account(mut)]
-    pub game: Account<'info, GameState>,
-    pub nft_account: Account<'info, NftAccount>,
-    pub minter_program: Program<'info, Minter>,
-}
-
-impl<'info> GetData<'info> {
-    pub fn set_data_ctx(&self) -> CpiContext<'_, '_, '_, 'info, GetNftData<'info>> {
-        let cpi_program = self.minter_program.to_account_info();
-        let cpi_accounts = GetNftData {
-            nft_account: self.nft_account.to_account_info()
-        };
-
-
-        CpiContext::new(cpi_program, cpi_accounts) 
-    }
-}
-*/
-
-
-
-
-
-/*
-pub fn set_id(ctx: Context<GetData>, data: u32) -> Result<()> {
-    let cpi_program = ctx.accounts.minter_program.to_account_info();
-    let cpi_accounts = GetNftData {
-        nft_account: ctx.accounts.nft_account.to_account_info(),
-    };
-    let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
-    minter::cpi::set_data(cpi_ctx, data)
-}
-
-pub fn set_id(ctx: Context<GetData>, data: u32) -> Result<()> {
-
-    // ctx.accounts.game.test = ctx.accounts.nft_account.id; 
-    minter::cpi::set_data(ctx.accounts.set_data_ctx(), data)
-}
-*/
-
-
-
 pub fn solve(ctx: Context<Solve>, directions: Vec<u8>) -> Result<bool> {
    
     //Paiement des fees pour la cagnotte du NFT et son créateur 
@@ -96,26 +46,23 @@ pub fn solve(ctx: Context<Solve>, directions: Vec<u8>) -> Result<bool> {
     
     //Récupération des données du NFT
     let nft_data = &ctx.accounts.other_data;
-
     require!(!nft_data.data_is_empty(), ErrorCode::UnknownNFT);
     
 
     let mut data_slice: &[u8] = &nft_data.data.borrow();
-
     let data_struct:NftAccount = 
         AccountDeserialize::try_deserialize(
             &mut data_slice,
         )?;
     
+    //L'id du solver doit être le même que celui du nft 
     require!(data_struct.id == game_account.id_nft, ErrorCode::UnknownNFT);
     
     let width:u8 = data_struct.width;
     let height:u8 = data_struct.height;
     let map_data:Vec<u8> = data_struct.data.clone();
         
-    
-   
-   
+    //Véfification de la solution 
     if verify(map_data, width, height, &directions)? {
         game_account.solved = true;
         game_account.last_request_result = 2;
@@ -124,7 +71,6 @@ pub fn solve(ctx: Context<Solve>, directions: Vec<u8>) -> Result<bool> {
             game_account.leader = ctx.accounts.signer.key(); 
             game_account.last_request_result = 3;
         }
-        
         return Ok(true);
     }
 
@@ -138,6 +84,7 @@ pub fn verify(map_data:Vec<u8>, width:u8, height:u8, directions:&Vec<u8>) -> Res
     let mut map_data = map_data.clone();
     let mut player_position:u16 = (width+1).into();
 
+    //Initialisation de la position du joueur
     for (i, &_value) in map_data.iter().enumerate() {
          if map_data[i as usize] == 2 || map_data[ i as usize] == 6 {
              player_position = i as u16;
@@ -145,10 +92,12 @@ pub fn verify(map_data:Vec<u8>, width:u8, height:u8, directions:&Vec<u8>) -> Res
          }
     }
 
+    //Déroulement de la séquence de déplacement 
     for i in directions {
         let _ = move_to(&mut map_data, width, height, &mut player_position, *i)?; 
     }   
    
+    //Vérification que les caisses sont aux bons endroits
     for i in 0..width*height{
         if map_data[i as usize] == 3 {
             return Ok(false);

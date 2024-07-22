@@ -26,15 +26,11 @@ pub struct Initialize<'info> {
 }
 
 
-
-
-
 pub fn initialize(ctx: Context<Initialize>, id_nft:u32) -> Result<()> {
 
     //Récupération des données du NFT
     let nft_account = &ctx.accounts.other_data;
-
-   require!(!nft_account.data_is_empty(), ErrorCode::UnknownNFT);
+    require!(!nft_account.data_is_empty(), ErrorCode::UnknownNFT);
     
 
     let mut data_slice: &[u8] = &nft_account.data.borrow();
@@ -44,6 +40,7 @@ pub fn initialize(ctx: Context<Initialize>, id_nft:u32) -> Result<()> {
             &mut data_slice,
         )?;
 
+    //L'id du NFT doit correspondre avec l'id du solver    
     require!(id_nft == data_struct.id, ErrorCode::WrongNftId);
     
 
