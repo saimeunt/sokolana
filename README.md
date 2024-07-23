@@ -65,6 +65,12 @@ npm run anchor-build
 npm run anchor-localnet
 ```
 
+#### Run the migrations
+
+```shell
+npm run anchor-migrate
+```
+
 #### Run the tests
 
 ```shell
