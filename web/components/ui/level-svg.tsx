@@ -82,7 +82,7 @@ export const boxPositions = (
     } else {
       const cell =
         nextLevel.data[positionToIndex(lastPosition, nextLevel.width)];
-      if (cell === Cells.BOX) {
+      if (cell === Cells.BOX || cell === Cells.BOX_ON_GOAL) {
         result.push(lastPosition);
       } else {
         const offset = InputPositionOffsets[input];
