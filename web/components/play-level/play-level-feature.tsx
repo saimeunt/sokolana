@@ -1,10 +1,12 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
-import { useWallet } from '@solana/wallet-adapter-react';
+import { levels } from '@/lib/levels';
+import { Input } from '@/lib/types';
+//import { useWallet } from '@solana/wallet-adapter-react';
 import { AppHero } from '../ui/ui-layout';
 import { defaultEditorLevel } from '@/lib/levels';
-import { Keypair } from '@solana/web3.js';
+// import { Keypair } from '@solana/web3.js';
 import LevelView from './level-view';
 import { useLocalStorage } from 'usehooks-ts';
 import useContext from '@/components/context/hook';
@@ -13,24 +15,24 @@ import {
   isFinished,
   getMoves,
   getPushes,
-  accountToLevelData,
-  accountToSolution,
-  loadLevel,
+  //accountToLevelData,
+  //accountToSolution,
+  //loadLevel,
 } from '@/components/context/level-state';
-import { useMinterProgram } from '@/lib/minter-data-access';
-import { useSolverProgram, getGameAccount } from '@/lib/solver-data-access';
+//import { useMinterProgram } from '@/lib/minter-data-access';
+//import { useSolverProgram, getGameAccount } from '@/lib/solver-data-access';
 
 const PlayLevelFeature = ({ id }: { id: string }) => {
-  const { publicKey } = useWallet();
+  /*const { publicKey } = useWallet();
   const { nftAccounts, mintNft } = useMinterProgram();
-  const { gameStateAccounts, claim } = useSolverProgram();
+  const { gameStateAccounts, claim } = useSolverProgram();*/
   const [showModal, setShowModal] = useState(false);
   const {
     state: { level },
   } = useContext();
   const [editorLevelData] = useLocalStorage('editor-level', defaultEditorLevel);
   const isEditor = id === 'editor';
-  if (
+  /*if (
     nftAccounts.isLoading ||
     !nftAccounts.data ||
     gameStateAccounts.isLoading ||
@@ -40,15 +42,17 @@ const PlayLevelFeature = ({ id }: { id: string }) => {
   }
   const nftAccount = nftAccounts.data.find(
     ({ account }) => account.id === Number(id)
-  );
+  );*/
+  const nftAccount = true;
   if (!isEditor && !nftAccount) {
     return null;
   }
-  const accountLevelData = nftAccount
+  /*const accountLevelData = nftAccount
     ? accountToLevelData(nftAccount.account)
-    : '';
+    : '';*/
+  const accountLevelData = levels[Number(id)];
   const levelData = isEditor ? editorLevelData : accountLevelData;
-  const gameStateAccount = gameStateAccounts.data.find(
+  /* const gameStateAccount = gameStateAccounts.data.find(
     ({ account }) => account.idNft === Number(id)
   );
   const bestSolution = gameStateAccount
@@ -76,7 +80,8 @@ const PlayLevelFeature = ({ id }: { id: string }) => {
         BigInt(0)
     );
   };
-  const hasRewards = hasOwnerRewards() || hasLeaderRewards();
+  const hasRewards = hasOwnerRewards() || hasLeaderRewards(); */
+  const bestSolution: Input[] = [];
   return (
     <div>
       <AppHero
@@ -96,7 +101,7 @@ const PlayLevelFeature = ({ id }: { id: string }) => {
               </Link>
             ) : (
               <div className="space-x-6">
-                {hasRewards && (
+                {/*hasRewards && (
                   <button
                     className="btn btn-accent"
                     onClick={() => {
@@ -105,7 +110,7 @@ const PlayLevelFeature = ({ id }: { id: string }) => {
                   >
                     Claim rewards
                   </button>
-                )}
+                )*/}
                 {isFinished(level) && (
                   <>
                     <button
@@ -117,7 +122,7 @@ const PlayLevelFeature = ({ id }: { id: string }) => {
                     <button
                       className="btn btn-secondary"
                       onClick={async () => {
-                        if (!nftAccount) {
+                        /* if (!nftAccount) {
                           return;
                         }
                         const mintAccount = Keypair.generate();
@@ -132,7 +137,7 @@ const PlayLevelFeature = ({ id }: { id: string }) => {
                           ).href,
                           mintAccount,
                           nftAccount: nftAccount.publicKey,
-                        });
+                        }); */
                       }}
                     >
                       Mint solution

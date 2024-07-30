@@ -1,4 +1,4 @@
-import * as dotenv from 'dotenv';
+/* import * as dotenv from 'dotenv';
 dotenv.config();
 
 import { levels } from '/home/troy/Solana/sokolana/web/lib/levels';
@@ -6,9 +6,9 @@ import { levels } from '/home/troy/Solana/sokolana/web/lib/levels';
 export let levelData: Buffer[] = [];
 const width = 8;
 const height = 8;
- 
+
 export function initLevel() {
-    
+
     for (let i = 0; i < levels.length; i++) {
         console.log("longeur string", levels[i].length);
         levelData.push(convertLevelToUintArray(levels[i]));
@@ -16,7 +16,7 @@ export function initLevel() {
 }
 
 function convertLevelToUintArray(level: string): Buffer {
-  
+
     console.log("longueur", level.length)
     const charToUintMap: { [key: string]: number } = {
       ' ': 0,
@@ -36,7 +36,7 @@ function convertLevelToUintArray(level: string): Buffer {
     }
     console.log("nouvelle longeur ", Buffer.from(uintArray).length);
     return Buffer.from( uintArray);
-} 
+}
 
 
 function displayMapData(mapData:ArrayBuffer) {
@@ -52,15 +52,15 @@ function displayMapData(mapData:ArrayBuffer) {
 }
 
 async function main() {
-    
+
    initLevel();
-   
+
    for(let i=0; i< levelData.length; i++)
    {
       console.log("Level", i);
       displayMapData(levelData[i]);
       console.log(" ");
-   } 
+   }
 
 }
 
@@ -68,4 +68,4 @@ main().catch(err => {
     console.error(err);
   });
 
-
+*/

@@ -15,7 +15,7 @@ const LevelsView = ({
         <LevelCard
           key={level.id}
           level={level}
-          bestSolution={bestSolutions[index]}
+          bestSolution={bestSolutions[index] ?? []}
         />
       ))}
     </div>

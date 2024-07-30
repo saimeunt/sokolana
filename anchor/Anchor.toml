@@ -8,6 +8,10 @@ skip-lint = false
 minter = "5PVX8zjPwPJHKqoJFcfKCXQzHGv4RiMQrij6TeLFYPWZ"
 solver = "Dxz9KW7PbRBfcyymgNVR59jJe8cscrhgkJixHYg9eGB1"
 
+[programs.devnet]
+minter = "5PVX8zjPwPJHKqoJFcfKCXQzHGv4RiMQrij6TeLFYPWZ"
+solver = "Dxz9KW7PbRBfcyymgNVR59jJe8cscrhgkJixHYg9eGB1"
+
 [registry]
 url = "https://api.apr.dev"
 

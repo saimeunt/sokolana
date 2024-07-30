@@ -68,8 +68,9 @@ export default function MintFeature({
             )}
             <button
               className="btn btn-primary"
-              onClick={() => setShowModal(true)}
-              disabled={!isMintable(level, solution)}
+              //onClick={() => setShowModal(true)}
+              //disabled={!isMintable(level, solution)}
+              disabled
             >
               Mint
             </button>
